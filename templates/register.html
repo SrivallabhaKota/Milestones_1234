@@ -1,0 +1,228 @@
+{% extends "layout.html" %}
+
+{% block title %}Create Account{% endblock %}
+
+{% block content %}
+<style>
+  .password-rules {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 0.5rem 1.5rem;
+    justify-content: start;
+    justify-self: start;
+    margin-left: auto;
+    margin-right: 0;
+    width: fit-content;
+    text-align: left;
+  }
+  .rule-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap; /* keeps "Min 8 characters" on one line */
+  }
+</style>
+<div class="page-wrapper" style="padding: 2rem 1rem;">
+  <div class="auth-container">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-3" role="alert" aria-live="polite">
+          {% for category, message in messages %}
+            <div class="alert-custom alert-{{ category }}" id="flash-{{ loop.index }}">
+              <i class="bi
+                {% if category == 'success' %}bi-check-circle-fill
+                {% elif category == 'danger'  %}bi-exclamation-circle-fill
+                {% elif category == 'warning' %}bi-exclamation-triangle-fill
+                {% else %}bi-info-circle-fill{% endif %}">
+              </i>
+              <span>{{ message }}</span>
+              <button type="button" class="alert-close ms-auto"
+                      style="background:none;border:none;color:inherit;cursor:pointer;font-size:1rem;"
+                      aria-label="Close alert">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="glass-card">
+
+      <div class="brand-logo">
+        <img src="{{ url_for('static', filename='images/logo.jpeg') }}"
+             alt="FinSight Logo"
+             class="brand-logo-img">
+        <div class="brand-text">
+          <span class="brand-name">FinSight</span>
+          <span class="brand-tagline">Finance Intelligence</span>
+        </div>
+      </div>
+
+      <h1 class="auth-title">Create Account</h1>
+      <p class="auth-subtitle">Join FinSight and take control of your financial future</p>
+
+      <div class="auth-divider"></div>
+
+      <form id="register-form"
+            action="{{ url_for('register') }}"
+            method="POST"
+            novalidate>
+
+        <div class="reg-form-row">
+
+          <div class="form-group">
+            <label for="name" class="form-label">Full Name</label>
+            <div class="input-wrapper">
+              <i class="bi bi-person-fill input-icon"></i>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                class="form-control-custom"
+                placeholder="John Doe"
+                autocomplete="name"
+                required
+                minlength="2"
+                aria-label="Full name"
+                aria-required="true"
+              />
+            </div>
+            <div id="name-validation-msg" class="validation-msg" aria-live="polite"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="email" class="form-label">Email Address</label>
+            <div class="input-wrapper">
+              <i class="bi bi-envelope-fill input-icon"></i>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                class="form-control-custom"
+                placeholder="you@example.com"
+                autocomplete="email"
+                required
+                aria-label="Email address"
+                aria-required="true"
+              />
+            </div>
+            <div id="email-validation-msg" class="validation-msg" aria-live="polite"></div>
+          </div>
+
+        </div>
+
+        <div class="reg-form-row">
+
+          <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <div class="input-wrapper has-right-icon">
+              <i class="bi bi-lock-fill input-icon"></i>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                class="form-control-custom"
+                placeholder="Create a strong password"
+                autocomplete="new-password"
+                required
+                minlength="8"
+                aria-label="Password"
+                aria-required="true"
+                aria-describedby="password-strength"
+              />
+              <button type="button" id="toggle-password" class="password-toggle"
+                      title="Show password" aria-label="Toggle password visibility">
+                <i class="bi bi-eye-fill"></i>
+              </button>
+            </div>
+
+            <div class="strength-meter" id="password-strength" aria-live="polite">
+              <div class="strength-bars" aria-hidden="true">
+                <div class="strength-bar" id="sbar-1"></div>
+                <div class="strength-bar" id="sbar-2"></div>
+                <div class="strength-bar" id="sbar-3"></div>
+                <div class="strength-bar" id="sbar-4"></div>
+              </div>
+              <div id="strength-label" class="strength-label"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="confirm_password" class="form-label">Confirm Password</label>
+            <div class="input-wrapper has-right-icon">
+              <i class="bi bi-shield-lock-fill input-icon"></i>
+              <input
+                type="password"
+                id="confirm_password"
+                name="confirm_password"
+                class="form-control-custom"
+                placeholder="Re-enter your password"
+                autocomplete="new-password"
+                required
+                minlength="8"
+                aria-label="Confirm password"
+                aria-required="true"
+              />
+              <button type="button" id="toggle-confirm" class="password-toggle"
+                      title="Show password" aria-label="Toggle confirm password">
+                <i class="bi bi-eye-fill"></i>
+              </button>
+            </div>
+            <div id="confirm-validation-msg" class="validation-msg" aria-live="polite"></div>
+
+            <div class="password-rules" aria-label="Password requirements">
+              <div class="rule-item" id="rule-len">
+                <i class="bi bi-circle" aria-hidden="true"></i>
+                <span>Min 8 characters</span>
+              </div>
+              <div class="rule-item" id="rule-upper">
+                <i class="bi bi-circle" aria-hidden="true"></i>
+                <span>Uppercase letter</span>
+              </div>
+              <div class="rule-item" id="rule-lower">
+                <i class="bi bi-circle" aria-hidden="true"></i>
+                <span>Lowercase letter</span>
+              </div>
+              <div class="rule-item" id="rule-number">
+                <i class="bi bi-circle" aria-hidden="true"></i>
+                <span>One number</span>
+              </div>
+              <div class="rule-item" id="rule-special">
+                <i class="bi bi-circle" aria-hidden="true"></i>
+                <span>Special character</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <button type="submit" id="register-btn"
+                class="btn-primary-custom mt-2"
+                aria-label="Create your FinSight account">
+          <i class="bi bi-person-check-fill me-2"></i>Create Account
+        </button>
+
+      </form>
+
+      <div class="auth-divider my-3"></div>
+      <p class="text-center" style="font-family:var(--font-body);font-size:0.88rem;color:var(--text-secondary);">
+        Already have an account?
+        <a href="{{ url_for('login_page') }}"
+           id="go-login-link"
+           style="color:var(--primary);font-weight:600;text-decoration:none;"
+           aria-label="Sign in to FinSight">
+          Sign In →
+        </a>
+      </p>
+
+    </div>
+
+    <p class="auth-footer mt-3">
+      &copy; 2024 FinSight. Your data is encrypted and secure 🔒
+    </p>
+
+  </div>
+</div>
+{% endblock %}

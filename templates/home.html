@@ -1,0 +1,121 @@
+{% extends "layout.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<nav class="home-navbar" role="navigation" aria-label="Main navigation">
+  <div class="home-nav-inner">
+    <a href="{{ url_for('home') }}" class="home-nav-brand" aria-label="FinSight Home">
+      <img src="{{ url_for('static', filename='images/logo.jpeg') }}"
+           alt="FinSight Logo"
+           class="home-nav-logo-img">
+      <span class="home-nav-name">Finsight</span>
+    </a>
+
+    <ul class="home-nav-links" role="list">
+      <li><a href="{{ url_for('login_page') }}" class="home-nav-link" id="nav-login-link">Login</a></li>
+    </ul>
+
+    <button class="home-nav-toggler" id="home-nav-toggler"
+            aria-label="Toggle navigation"
+            aria-expanded="false"
+            aria-controls="home-nav-mobile">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+
+  <div class="home-nav-mobile" id="home-nav-mobile" aria-hidden="true">
+    <a href="{{ url_for('login_page') }}" class="home-nav-mobile-link">Login</a>
+    <a href="{{ url_for('register') }}"  class="home-nav-mobile-link cta">Get Started</a>
+  </div>
+</nav>
+
+<section class="home-hero" aria-labelledby="hero-heading">
+  <div class="home-container">
+    <h1 class="hero-title" id="hero-heading">
+      Manage Your Money <span>Smarter</span>
+    </h1>
+    <p class="hero-subtitle">
+      Track income, control expenses, create budgets,<br>
+      and gain insights into your financial habits.
+    </p>
+    <div class="hero-actions" role="group" aria-label="Call to action">
+      <a href="{{ url_for('register') }}"
+         id="hero-get-started-btn"
+         class="hero-btn-primary"
+         aria-label="Get started with FinSight">
+        <i class="bi bi-rocket-takeoff me-2"></i>Get Started
+      </a>
+      <a href="{{ url_for('login_page') }}"
+         id="hero-login-btn"
+         class="hero-btn-outline"
+         aria-label="Login to FinSight">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Login
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="home-features" aria-labelledby="features-heading">
+  <div class="home-container">
+    <h2 class="home-section-title" id="features-heading">Why Choose <span class="text-gradient">FinSight</span>?</h2>
+    <div class="home-features-grid" role="list">
+
+      <article class="home-feature-card" role="listitem" id="feature-income">
+        <span class="home-feature-icon" aria-hidden="true"><i class="bi bi-cash-coin"></i></span>
+        <h3 class="home-feature-title">Track Income & Expenses</h3>
+        <p class="home-feature-desc">
+          Record every rupee earned and spent. Get a complete financial picture at a glance.
+        </p>
+      </article>
+
+      <article class="home-feature-card" role="listitem" id="feature-budgets">
+        <span class="home-feature-icon" aria-hidden="true"><i class="bi bi-pie-chart-fill"></i></span>
+        <h3 class="home-feature-title">Smart Budgets</h3>
+        <p class="home-feature-desc">
+          Set monthly category budgets with real-time alerts when you're close to limits.
+        </p>
+      </article>
+
+      <article class="home-feature-card" role="listitem" id="feature-goals">
+        <span class="home-feature-icon" aria-hidden="true"><i class="bi bi-flag-fill"></i></span>
+        <h3 class="home-feature-title">Goal Planning</h3>
+        <p class="home-feature-desc">
+          Plan savings goals with deadlines, track progress, and stay motivated with smart timelines.
+        </p>
+      </article>
+
+      <article class="home-feature-card" role="listitem" id="feature-investments">
+        <span class="home-feature-icon" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></span>
+        <h3 class="home-feature-title">Investment Tracker</h3>
+        <p class="home-feature-desc">
+          Monitor your portfolio across Stocks, Mutual Funds, FDs, and more in one dashboard.
+        </p>
+      </article>
+
+      <article class="home-feature-card" role="listitem" id="feature-alerts">
+        <span class="home-feature-icon" aria-hidden="true"><i class="bi bi-bell-fill"></i></span>
+        <h3 class="home-feature-title">Smart Alerts</h3>
+        <p class="home-feature-desc">
+          Get AI-powered financial alerts for budget overruns, goal deadlines, and spending spikes.
+        </p>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<footer class="home-footer" role="contentinfo">
+  <div class="home-container">
+    <p class="home-footer-text">
+      &copy; 2024 FinSight. Made with <i class="bi bi-heart-fill text-danger"></i> for your financial future.
+      &nbsp;|&nbsp;
+      <a href="{{ url_for('login_page') }}" class="home-footer-link">Login</a>
+      &nbsp;|&nbsp;
+      <a href="{{ url_for('register') }}"   class="home-footer-link">Register</a>
+    </p>
+  </div>
+</footer>
+
+{% endblock %}

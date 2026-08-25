@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create Budget – FinSight</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cursor.css') }}">
+  <style>
+    .form-panel {
+      border-top: 4px solid #1E293B;
+    }
+    .preview-panel {
+      background: var(--white);
+      border-radius: var(--border-radius-card);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 20px;
+    }
+    .preview-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .preview-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #F1F5F9;
+      font-size: 0.9rem;
+    }
+    .preview-row:last-child {
+      border-bottom: 0;
+    }
+    .preview-label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .preview-value {
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+  </style>
+</head>
+<body class="theme-budget">
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<!-- Profile Chip -->
+<a href="{{ url_for('profile_page') }}" class="profile-chip-global" title="View Profile">
+  <div class="profile-chip-avatar">{{ user_name[0]|upper if user_name else 'A' }}</div>
+  <div class="profile-chip-info">
+    <span class="profile-chip-name">{{ user_name if user_name else 'Arjun Mehta' }}</span>
+  </div>
+</a>
+
+  <button class="floating-hamburger" id="sidebar-toggle-btn" type="button" title="Toggle Sidebar Menu">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <div class="d-flex">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="logo-row">
+      <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="dash-nav-logo-img" style="width:42px;height:42px;">
+      <div class="logo-text">
+        <h3>FinSight</h3>
+        <small>Smart. Secure. Simple.</small>
+      </div>
+    </div>
+    <nav class="nav-list">
+      <a href="{{ url_for('dashboard') }}" class="nav-item"><i class="bi bi-grid"></i><span>Dashboard</span></a>
+      <a href="{{ url_for('add_income') }}" class="nav-item"><i class="bi bi-cash-coin"></i><span>Income Management</span></a>
+      <a href="{{ url_for('add_expense') }}" class="nav-item"><i class="bi bi-wallet2"></i><span>Expense Management</span></a>
+      <a href="{{ url_for('add_budget') }}" class="nav-item active"><i class="bi bi-pie-chart"></i><span>Budget Management</span></a>
+      <a href="{{ url_for('add_investment') }}" class="nav-item"><i class="bi bi-graph-up-arrow"></i><span>Investment Tracking</span></a>
+      <a href="{{ url_for('goals_list') }}" class="nav-item"><i class="bi bi-flag"></i><span>Goals</span></a>
+      <a href="{{ url_for('profile_page') }}" class="nav-item"><i class="bi bi-person-circle"></i><span>Profile</span></a>
+    </nav>
+    
+    <button class="sidebar-reset-btn" id="sidebar-reset-btn" type="button" onclick="if(confirm('Are you sure you want to reset all data to 0?')) { fetch('/api/reset-data', {method: 'POST'}).then(() => { window.location.href='/dashboard'; }); }" title="Reset all data to 0">
+      <i class="bi bi-trash"></i><span>Reset Data</span>
+    </button>
+    <a href="{{ url_for('logout') }}" class="sidebar-logout-btn" title="Logout from session">
+      <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+    </a>
+  </aside>
+
+  <main class="main-panel">
+    <div class="content-stack">
+
+      <div class="page-hero budget-hero">
+        <div class="hero-left">
+          <div class="hero-icon-wrap budget-icon-wrap" style="background: rgba(255,255,255,0.25);">
+            <i class="bi bi-pie-chart text-white"></i>
+          </div>
+          <div>
+            <h1 class="hero-title">Create Budget</h1>
+            <p class="hero-subtitle">Set a monthly spending limit for a category</p>
+          </div>
+        </div>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="page-alert alert-{{ category }}">
+              <i class="bi {% if category == 'success' %}bi-check-circle-fill{% elif category == 'danger' %}bi-exclamation-circle-fill{% else %}bi-info-circle-fill{% endif %}"></i>
+              <span>{{ message }}</span>
+              <button type="button" class="alert-close-btn" onclick="this.parentElement.remove()"><i class="bi bi-x-lg"></i></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% if error %}
+        <div class="page-alert alert-danger">
+          <i class="bi bi-exclamation-circle-fill"></i>
+          <span>{{ error }}</span>
+        </div>
+      {% endif %}
+
+      <div class="row g-4">
+        <!-- Form Panel -->
+        <div class="col-lg-8">
+          <div class="panel form-panel">
+            <div class="form-panel-header d-flex align-items-center mb-4">
+              <div class="form-panel-icon bg-purple-subtle text-purple" style="width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 1.2rem; margin-right: 12px;">
+                <i class="bi bi-plus-circle"></i>
+              </div>
+              <div>
+                <h4 class="form-panel-title mb-0" style="font-weight: 700; color: var(--text-dark);">New Budget Plan</h4>
+                <p class="form-panel-desc mb-0 text-muted" style="font-size: 0.82rem;">Define your spending boundaries for this month</p>
+              </div>
+            </div>
+
+            <form id="budget-form" action="{{ url_for('add_budget') }}" method="POST" novalidate>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="budget-category" class="form-label" style="font-weight: 600;">Budget Category</label>
+                  <input type="text" id="budget-category" name="category" class="form-control" placeholder="e.g. Food, Housing, Transport" required>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="budget-limit" class="form-label" style="font-weight: 600;">Spending Limit (₹)</label>
+                  <div class="input-group">
+                    <span class="input-group-text">₹</span>
+                    <input type="number" id="budget-limit" name="limit_amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="budget-month" class="form-label" style="font-weight: 600;">Month</label>
+                  <select id="budget-month" name="month" class="form-select" required>
+                    <option value="" disabled selected>Select Month</option>
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="budget-year" class="form-label" style="font-weight: 600;">Year</label>
+                  <input type="number" id="budget-year" name="year" class="form-control" placeholder="e.g. 2026" min="2020" max="2099" required>
+                </div>
+
+                <div class="col-12">
+                  <label for="budget-goal" class="form-label" style="font-weight: 600;">Link to Goal (Optional)</label>
+                  <select id="budget-goal" name="goal_id" class="form-select">
+                    <option value="">-- No Goal Linked --</option>
+                    {% if active_goals %}
+                      {% for goal in active_goals %}
+                        <option value="{{ goal.id }}">🎯 {{ goal.goal_name }} ({{ goal.category }})</option>
+                      {% endfor %}
+                    {% endif %}
+                  </select>
+                </div>
+
+                <div class="col-12 mt-4">
+                  <button type="submit" id="save-budget-btn" class="btn btn-primary px-4 py-2" style="border-radius: 10px;">
+                    <i class="bi bi-plus-circle-fill me-1"></i> Create Budget
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- History Sidebar -->
+        <div class="col-lg-4">
+          <div class="preview-panel">
+            <h4 class="preview-title"><i class="bi bi-pie-chart-fill text-primary"></i> Active Budgets</h4>
+            <div id="active-budgets-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
+              <div class="text-center text-muted py-4">Loading budgets...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/cursor.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    fetch('/api/budget-with-goals')
+      .then(r => r.json())
+      .then(data => {
+        const list = document.getElementById('active-budgets-list');
+        list.innerHTML = '';
+        if (data.length === 0) {
+          list.innerHTML = '<div class="text-center text-muted py-3">No active budgets found.</div>';
+          return;
+        }
+        data.slice(0, 5).forEach(b => {
+          const item = document.createElement('div');
+          item.className = 'preview-row';
+          item.innerHTML = `
+            <div style="display: flex; flex-direction: column; width: 100%;">
+              <div style="display: flex; justify-content: space-between;">
+                <span class="preview-label" style="color: var(--text-dark); font-weight: 600;">${b.category}</span>
+                <span class="preview-value" style="font-size: 0.85rem;">₹${(b.spent || 0).toLocaleString('en-IN')} / ₹${(b.limit_amount || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div class="progress mt-2" style="height: 6px; border-radius: 99px;">
+                <div class="progress-bar ${b.status === 'exceeded' ? 'bg-danger' : b.status === 'warning' ? 'bg-warning' : 'bg-success'}" style="width: ${Math.min(b.percent_used || 0, 100)}%"></div>
+              </div>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+      })
+      .catch(() => {
+        document.getElementById('active-budgets-list').innerHTML = '<div class="text-center text-muted py-3">Failed to load budgets.</div>';
+      });
+  });
+</script>
+</body>
+</html>

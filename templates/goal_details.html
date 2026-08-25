@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Goal Details – FinSight</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cursor.css') }}">
+  <style>
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+    }
+    @media (max-width: 991.98px) {
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .milestone-row {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 12px 0;
+      border-bottom: 1px solid #F1F5F9;
+    }
+    .milestone-row:last-child {
+      border-bottom: 0;
+    }
+    .milestone-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #CBD5E1;
+      border: 3px solid var(--white);
+      box-shadow: 0 0 0 2px #CBD5E1;
+    }
+    .milestone-dot.completed {
+      background: var(--success);
+      box-shadow: 0 0 0 2px var(--success);
+    }
+    .milestone-dot.in-progress {
+      background: var(--primary-blue);
+      box-shadow: 0 0 0 2px var(--primary-blue);
+    }
+    .milestone-dot.on-hold {
+      background: var(--orange);
+      box-shadow: 0 0 0 2px var(--orange);
+    }
+  </style>
+</head>
+<body class="theme-dash">
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+  <button class="floating-hamburger" id="sidebar-toggle-btn" type="button" title="Toggle Sidebar Menu">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <div class="d-flex">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="logo-row">
+        <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="dash-nav-logo-img" style="width:42px;height:42px;">
+        <div class="logo-text">
+          <h3>FinSight</h3>
+          <small>Smart. Secure. Simple.</small>
+        </div>
+      </div>
+      <nav class="nav-list">
+        <a href="{{ url_for('dashboard') }}" class="nav-item"><i class="bi bi-grid"></i><span>Dashboard</span></a>
+        <a href="{{ url_for('add_income') }}" class="nav-item"><i class="bi bi-cash-coin"></i><span>Income Management</span></a>
+        <a href="{{ url_for('add_expense') }}" class="nav-item"><i class="bi bi-wallet2"></i><span>Expense Management</span></a>
+        <a href="{{ url_for('add_budget') }}" class="nav-item"><i class="bi bi-pie-chart"></i><span>Budget Management</span></a>
+        <a href="{{ url_for('add_investment') }}" class="nav-item"><i class="bi bi-graph-up-arrow"></i><span>Investment Tracking</span></a>
+        <a href="{{ url_for('goals_list') }}" class="nav-item active"><i class="bi bi-flag"></i><span>Goals</span></a>
+        <a href="{{ url_for('profile_page') }}" class="nav-item"><i class="bi bi-person-circle"></i><span>Profile</span></a>
+      </nav>
+      
+      <button class="sidebar-reset-btn" id="sidebar-reset-btn" type="button" onclick="if(confirm('Are you sure you want to reset all data to 0?')) { fetch('/api/reset-data', {method: 'POST'}).then(() => { window.location.href='/dashboard'; }); }" title="Reset all data to 0">
+        <i class="bi bi-trash"></i><span>Reset Data</span>
+      </button>
+      <a href="{{ url_for('logout') }}" class="sidebar-logout-btn" title="Logout from session">
+        <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+      </a>
+    </aside>
+
+    <main class="main-panel">
+      <div class="content-stack">
+
+        <!-- Page Hero -->
+        <div class="page-hero goals-hero">
+          <div class="hero-left">
+            <div class="hero-icon-wrap dash-icon-wrap" style="background: rgba(255,255,255,0.25);">
+              <i class="bi bi-flag text-white"></i>
+            </div>
+            <div>
+              <h1 class="hero-title">{{ goal.goal_name }}</h1>
+              <p class="hero-subtitle">Smart Track: <span class="badge rounded-pill bg-{{ goal.smart_status_class }}">{{ goal.smart_status }}</span> | Priority: <span class="badge rounded-pill bg-{{ goal.priority_class }}">{{ goal.priority }}</span></p>
+            </div>
+          </div>
+          <div class="hero-stats d-flex gap-2">
+            <button class="btn btn-success" style="border-radius: 12px; font-weight: 600;" data-bs-toggle="modal" data-bs-target="#addSavingsModal"><i class="bi bi-piggy-bank me-1"></i> Add Savings</button>
+            <button class="btn btn-primary" style="border-radius: 12px; font-weight: 600;" data-bs-toggle="modal" data-bs-target="#addMilestoneModal"><i class="bi bi-plus-lg me-1"></i> Add Milestone</button>
+            <a href="{{ url_for('edit_goal', goal_id=goal.id) }}" class="btn btn-outline-secondary" style="border-radius: 12px; font-weight: 600;"><i class="bi bi-pencil me-1"></i> Edit</a>
+          </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="page-alert alert-{{ category }}">
+                <i class="bi {% if category == 'success' %}bi-check-circle-fill{% elif category == 'danger' %}bi-exclamation-circle-fill{% else %}bi-info-circle-fill{% endif %}"></i>
+                <span>{{ message }}</span>
+                <button type="button" class="alert-close-btn" onclick="this.parentElement.remove()"><i class="bi bi-x-lg"></i></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="details-grid">
+          <!-- Main Content Pane -->
+          <div class="d-flex flex-direction-column gap-4">
+            <!-- Progress Box -->
+            <div class="panel">
+              <h4 style="font-weight: 800; color: var(--text-dark); margin-bottom: 20px;">Overall Goal Progress</h4>
+              <div class="row g-3 text-center mb-4">
+                <div class="col-md-3 col-6">
+                  <div class="p-3 bg-light border" style="border-radius: 12px;">
+                    <div class="text-muted" style="font-size: 0.76rem; font-weight: 600; text-transform: uppercase;">Target</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; margin-top: 4px;">₹{{ goal.target_amount|inr_format }}</div>
+                  </div>
+                </div>
+                <div class="col-md-3 col-6">
+                  <div class="p-3 bg-light border" style="border-radius: 12px;">
+                    <div class="text-muted" style="font-size: 0.76rem; font-weight: 600; text-transform: uppercase;">Saved</div>
+                    <div class="text-success" style="font-size: 1.15rem; font-weight: 800; margin-top: 4px;">₹{{ goal.current_amount|inr_format }}</div>
+                  </div>
+                </div>
+                <div class="col-md-3 col-6">
+                  <div class="p-3 bg-light border" style="border-radius: 12px;">
+                    <div class="text-muted" style="font-size: 0.76rem; font-weight: 600; text-transform: uppercase;">Remaining</div>
+                    <div class="text-danger" style="font-size: 1.15rem; font-weight: 800; margin-top: 4px;">₹{{ goal.remaining_amount|inr_format }}</div>
+                  </div>
+                </div>
+                <div class="col-md-3 col-6">
+                  <div class="p-3 bg-light border" style="border-radius: 12px;">
+                    <div class="text-muted" style="font-size: 0.76rem; font-weight: 600; text-transform: uppercase;">Progress</div>
+                    <div class="text-primary" style="font-size: 1.15rem; font-weight: 800; margin-top: 4px;">{{ goal.progress_percentage }}%</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="progress" style="height: 12px; border-radius: 999px; margin-bottom: 8px;">
+                <div class="progress-bar bg-{{ goal.smart_status_class }}" role="progressbar" style="width: {{ goal.progress_percentage }}%"></div>
+              </div>
+              <div class="d-flex justify-content-between text-muted" style="font-size: 0.8rem; font-weight: 600;">
+                <span>Start: {{ goal.start_date or 'N/A' }}</span>
+                <span>Deadline: {{ goal.target_date or 'No Deadline' }}</span>
+              </div>
+            </div>
+
+            <!-- Milestones Panel -->
+            <div class="panel">
+              <h4 style="font-weight: 800; color: var(--text-dark); margin-bottom: 20px;">Milestones</h4>
+              {% if parts %}
+                <div class="milestones-list">
+                  {% for part in parts %}
+                    <div class="milestone-row d-flex justify-content-between align-items-center">
+                      <div class="d-flex align-items-center gap-3">
+                        <div class="milestone-dot {{ part.status_class }}"></div>
+                        <div>
+                          <div style="font-weight: 700; color: var(--text-dark); font-size: 0.95rem;">{{ part.part_name }}</div>
+                          <div class="text-muted" style="font-size: 0.78rem;">
+                            Target: ₹{{ part.target_amount|inr_format }} | Saved: ₹{{ part.saved_amount|inr_format }}
+                            {% if part.due_date %} | Due: {{ part.due_date }}{% endif %}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-{{ part.status_class }}">{{ part.status }}</span>
+                        <button class="btn btn-sm btn-light" style="border-radius: 8px; border: 1px solid #E2E8F0;" onclick="openUpdateMilestone({{ part.id }}, '{{ part.part_name|replace("'","\\'") }}', {{ part.target_amount }}, {{ part.saved_amount }}, '{{ part.status }}')"><i class="bi bi-pencil"></i></button>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="text-center py-4 text-muted">
+                  <i class="bi bi-list-check" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                  <p class="mb-0 mt-2">No milestones set. Define milestones to break down your goal!</p>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Savings History Panel -->
+            <div class="panel">
+              <h4 style="font-weight: 800; color: var(--text-dark); margin-bottom: 20px;">Savings History</h4>
+              {% if savings %}
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Date</th>
+                        <th>Note</th>
+                        <th class="text-end">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for s in savings %}
+                        <tr>
+                          <td>{{ s.saving_date }}</td>
+                          <td class="text-muted">{{ s.note or 'Savings entry' }}</td>
+                          <td class="text-end text-success font-weight-bold">₹{{ s.amount|inr_format }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <div class="text-center py-4 text-muted">
+                  <i class="bi bi-piggy-bank" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                  <p class="mb-0 mt-2">No savings recorded yet.</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Sidebar Pane -->
+          <div>
+            <!-- Target Summary Sidebar Box -->
+            <div class="panel mb-4" style="border-left: 4px solid var(--primary-blue);">
+              <h5 style="font-weight: 700; color: var(--text-dark); margin-bottom: 16px;"><i class="bi bi-info-circle text-primary me-2"></i> Goal Summary</h5>
+              <div class="d-flex flex-column gap-3" style="font-size: 0.88rem;">
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Goal Type</span>
+                  <span style="font-weight: 600;">{{ goal.goal_type or 'General' }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Category</span>
+                  <span style="font-weight: 600;">{{ goal.category }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Status</span>
+                  <span style="font-weight: 600;">{{ goal.status }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Time Left</span>
+                  <span style="font-weight: 600;">{{ goal.months_left }} months ({{ goal.days_left or 'N/A' }} days)</span>
+                </div>
+                <div class="d-flex justify-content-between border-top pt-2">
+                  <span class="text-muted">Monthly Saving</span>
+                  <span class="text-primary" style="font-weight: 700;">₹{{ goal.required_monthly_saving|inr_format }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Weekly Saving</span>
+                  <span class="text-primary" style="font-weight: 700;">₹{{ goal.required_weekly_saving|inr_format }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notes Panel -->
+            {% if goal.notes %}
+              <div class="panel">
+                <h5 style="font-weight: 700; color: var(--text-dark); margin-bottom: 12px;"><i class="bi bi-sticky text-warning me-2"></i> Notes</h5>
+                <p class="text-muted mb-0" style="font-size: 0.88rem; white-space: pre-wrap;">{{ goal.notes }}</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Budget-Goal-Expense Activity Feed -->
+      <div class="panel mt-4" style="margin-top:24px!important;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:4px;height:22px;border-radius:2px;background:linear-gradient(180deg,#6366F1,#8B5CF6);"></div>
+            <h5 style="font-weight:800;color:#0F172A;margin:0;font-size:1rem;">Budget &#8594; Goal &#8594; Activity Feed</h5>
+          </div>
+          <span style="font-size:0.75rem;color:#94A3B8;">Savings &amp; linked expense activities</span>
+        </div>
+        <div id="goal-activity-feed" style="min-height:80px;">
+          <div style="text-align:center;padding:30px;color:#94A3B8;font-size:0.85rem;">
+            <i class="bi bi-hourglass-split" style="font-size:1.5rem;display:block;margin-bottom:8px;"></i>
+            Loading activity feed...
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Add Savings Modal -->
+  <div class="modal fade" id="addSavingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius: 16px;">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title font-weight-bold" style="font-weight: 800; color: var(--text-dark);"><i class="bi bi-piggy-bank text-success me-2"></i> Add Savings</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form method="POST" action="{{ url_for('add_savings', goal_id=goal.id) }}">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label" style="font-weight: 600;">Savings Amount (INR) *</label>
+              <div class="input-group">
+                <span class="input-group-text">₹</span>
+                <input type="number" name="amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" style="font-weight: 600;">Saving Date *</label>
+              <input type="date" name="saving_date" class="form-control" value="{{ today }}" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" style="font-weight: 600;">Note</label>
+              <input type="text" name="note" class="form-control" placeholder="e.g. March bonus saving...">
+            </div>
+          </div>
+          <div class="modal-footer border-0 justify-content-end pb-4">
+            <button type="button" class="btn btn-outline-secondary px-4 me-2" style="border-radius: 10px;" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success px-4" style="border-radius: 10px;">Add Savings</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Milestone Modal -->
+  <div class="modal fade" id="addMilestoneModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius: 16px;">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title font-weight-bold" style="font-weight: 800; color: var(--text-dark);"><i class="bi bi-flag-fill text-primary me-2"></i> Add Milestone</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form method="POST" action="{{ url_for('add_milestone', goal_id=goal.id) }}">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label" style="font-weight: 600;">Milestone Name *</label>
+              <input type="text" name="part_name" class="form-control" placeholder="e.g. Save first ₹20,000..." required>
+            </div>
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label" style="font-weight: 600;">Target Amount (INR) *</label>
+                <input type="number" name="target_amount" class="form-control" placeholder="0.00" step="0.01" min="1" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" style="font-weight: 600;">Amount Saved</label>
+                <input type="number" name="saved_amount" class="form-control" placeholder="0.00" step="0.01" min="0" value="0">
+              </div>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" style="font-weight: 600;">Due Date</label>
+                <input type="date" name="due_date" class="form-control">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" style="font-weight: 600;">Status</label>
+                <select name="part_status" class="form-select">
+                  <option value="Pending">Pending</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-0 justify-content-end pb-4">
+            <button type="button" class="btn btn-outline-secondary px-4 me-2" style="border-radius: 10px;" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary px-4" style="border-radius: 10px;">Add Milestone</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update Milestone Modal -->
+  <div class="modal fade" id="updateMilestoneModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius: 16px;">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title font-weight-bold" id="updateMilestoneTitle" style="font-weight: 800; color: var(--text-dark);">Update Milestone</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form method="POST" id="updateMilestoneForm">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label" style="font-weight: 600;">Amount Saved (INR)</label>
+              <input type="number" id="um_saved" name="saved_amount" class="form-control" placeholder="0.00" step="0.01" min="0">
+              <div class="form-text" id="um_target_hint"></div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" style="font-weight: 600;">Status</label>
+              <select id="um_status" name="part_status" class="form-select">
+                <option value="Pending">Pending</option>
+                <option value="In Progress">In Progress</option>
+                <option value="On Hold">On Hold</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer border-0 justify-content-end pb-4">
+            <button type="button" class="btn btn-outline-secondary px-4 me-2" style="border-radius: 10px;" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary px-4" style="border-radius: 10px;">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/cursor.js') }}"></script>
+  <script>
+    function openUpdateMilestone(partId, name, target, saved, status) {
+      document.getElementById('updateMilestoneTitle').textContent = `Update: ${name}`;
+      document.getElementById('updateMilestoneForm').action = `/goals/{{ goal.id }}/milestones/${partId}/update`;
+      document.getElementById('um_saved').value = saved;
+      document.getElementById('um_target_hint').textContent = `Target: ₹${target.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+      const sel = document.getElementById('um_status');
+      for (let opt of sel.options) {
+        opt.selected = (opt.value === status);
+      }
+      const modal = new bootstrap.Modal(document.getElementById('updateMilestoneModal'));
+      modal.show();
+    }
+
+    // Load Activity Feed
+    (function() {
+      var goalId = {{ goal.id }};
+      var feed = document.getElementById('goal-activity-feed');
+      if (!feed) return;
+      fetch('/api/goal/' + goalId + '/activity')
+        .then(function(r){ return r.ok ? r.json() : {activities:[]}; })
+        .then(function(data) {
+          var acts = data.activities || [];
+          if (acts.length === 0) {
+            feed.innerHTML = '<div style="text-align:center;padding:30px;color:#94A3B8;font-size:0.85rem;"><i class="bi bi-clock-history" style="font-size:1.5rem;display:block;margin-bottom:8px;"></i>No activities yet. Add savings or link a budget to this goal.</div>';
+            return;
+          }
+          var html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+          acts.forEach(function(a) {
+            var isSavings = a.type === 'savings';
+            var color = isSavings ? '#10B981' : '#EF4444';
+            var icon  = isSavings ? 'bi-piggy-bank-fill' : 'bi-cart3';
+            var label = isSavings ? 'Savings Added' : 'Expense: ' + a.notes;
+            var sign  = isSavings ? '+' : '-';
+            html += '<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:#F8FAFC;border-radius:12px;border:1px solid #F1F5F9;">' +
+              '<div style="width:36px;height:36px;border-radius:50%;background:' + color + '1A;display:grid;place-items:center;flex-shrink:0;">' +
+              '<i class="bi ' + icon + '" style="color:' + color + ';font-size:1rem;"></i></div>' +
+              '<div style="flex:1;"><div style="font-size:0.83rem;font-weight:700;color:#0F172A;">' + label + '</div>' +
+              '<div style="font-size:0.73rem;color:#94A3B8;margin-top:2px;">' + a.date + '</div></div>' +
+              '<div style="font-size:0.9rem;font-weight:800;color:' + color + ';">' + sign + '&#8377;' + parseFloat(a.amount).toLocaleString('en-IN') + '</div></div>';
+          });
+          html += '</div>';
+          feed.innerHTML = html;
+        })
+        .catch(function() {
+          feed.innerHTML = '<div style="text-align:center;padding:20px;color:#94A3B8;font-size:0.82rem;">Could not load activity feed.</div>';
+        });
+    })();
+  </script>
+</body>
+</html>

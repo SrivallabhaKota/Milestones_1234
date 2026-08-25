@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profile & settings – FinSight</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cursor.css') }}">
+  <style>
+    .profile-card {
+      border-top: 4px solid #1E293B;
+    }
+    .profile-avatar-initials {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-blue), var(--purple));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: 800;
+    }
+    .profile-stat-box {
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      background: #F8FAFC;
+    }
+    .profile-stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-dark);
+    }
+    .profile-stat-label {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body class="theme-dash">
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<!-- Profile Chip -->
+<a href="{{ url_for('profile_page') }}" class="profile-chip-global" title="View Profile">
+  <div class="profile-chip-avatar">{{ user_name[0]|upper if user_name else 'A' }}</div>
+  <div class="profile-chip-info">
+    <span class="profile-chip-name">{{ user_name if user_name else 'Arjun Mehta' }}</span>
+  </div>
+</a>
+
+
+  <button class="floating-hamburger" id="sidebar-toggle-btn" type="button" title="Toggle Sidebar Menu">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <div class="d-flex">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="logo-row">
+        <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="dash-nav-logo-img" style="width:42px;height:42px;">
+        <div class="logo-text">
+          <h3>FinSight</h3>
+          <small>Smart. Secure. Simple.</small>
+        </div>
+      </div>
+      <nav class="nav-list">
+        <a href="{{ url_for('dashboard') }}" class="nav-item"><i class="bi bi-grid"></i><span>Dashboard</span></a>
+        <a href="{{ url_for('add_income') }}" class="nav-item"><i class="bi bi-cash-coin"></i><span>Income Management</span></a>
+        <a href="{{ url_for('add_expense') }}" class="nav-item"><i class="bi bi-wallet2"></i><span>Expense Management</span></a>
+        <a href="{{ url_for('add_budget') }}" class="nav-item"><i class="bi bi-pie-chart"></i><span>Budget Management</span></a>
+        <a href="{{ url_for('add_investment') }}" class="nav-item"><i class="bi bi-graph-up-arrow"></i><span>Investment Tracking</span></a>
+        <a href="{{ url_for('goals_list') }}" class="nav-item"><i class="bi bi-flag"></i><span>Goals</span></a>
+        <a href="{{ url_for('profile_page') }}" class="nav-item active"><i class="bi bi-person-circle"></i><span>Profile</span></a>
+      </nav>
+      
+      <button class="sidebar-reset-btn" id="sidebar-reset-btn" type="button" onclick="if(confirm('Are you sure you want to reset all data to 0?')) { fetch('/api/reset-data', {method: 'POST'}).then(() => { window.location.href='/dashboard'; }); }" title="Reset all data to 0">
+        <i class="bi bi-trash"></i><span>Reset Data</span>
+      </button>
+      <a href="{{ url_for('logout') }}" class="sidebar-logout-btn" title="Logout from session">
+        <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+      </a>
+    </aside>
+
+    <main class="main-panel">
+      <div class="content-stack">
+
+        <!-- Page Hero -->
+        <div class="page-hero profile-hero">
+          <div class="hero-left">
+            <div class="hero-icon-wrap dash-icon-wrap" style="background: rgba(255,255,255,0.25);">
+              <i class="bi bi-person-circle text-white"></i>
+            </div>
+            <div>
+              <h1 class="hero-title">User Profile</h1>
+              <p class="hero-subtitle">Manage settings, saving metrics and planned investment cap</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="page-alert alert-{{ category }}">
+                <i class="bi {% if category == 'success' %}bi-check-circle-fill{% elif category == 'danger' %}bi-exclamation-circle-fill{% else %}bi-info-circle-fill{% endif %}"></i>
+                <span>{{ message }}</span>
+                <button type="button" class="alert-close-btn" onclick="this.parentElement.remove()"><i class="bi bi-x-lg"></i></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="row g-4">
+          <!-- Profile Edit Panel -->
+          <div class="col-lg-7">
+            <div class="panel profile-card">
+              <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="profile-avatar-initials">
+                  {{ user_name[:2].upper() }}
+                </div>
+                <div>
+                  <h4 style="font-weight: 800; color: var(--text-dark); margin-bottom: 2px;">{{ user_name }}</h4>
+                  <p class="text-muted mb-0" style="font-size: 0.88rem;">{{ user_email }}</p>
+                </div>
+              </div>
+
+              <form method="POST" action="{{ url_for('profile_page') }}">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label" style="font-weight: 600;">Phone Number</label>
+                    <input type="tel" name="phone" class="form-control" placeholder="+91 99999 99999" value="{{ prof.phone or '' }}">
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label" style="font-weight: 600;">Preferred Currency</label>
+                    <select name="currency" class="form-select">
+                      <option value="₹" {% if prof.currency == '₹' %}selected{% endif %}>₹ Indian Rupee</option>
+                      <option value="$" {% if prof.currency == '$' %}selected{% endif %}>$ US Dollar</option>
+                      <option value="€" {% if prof.currency == '€' %}selected{% endif %}>€ Euro</option>
+                      <option value="£" {% if prof.currency == '£' %}selected{% endif %}>£ British Pound</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label" style="font-weight: 600;">Monthly Savings Capacity (INR)</label>
+                    <input type="number" name="monthly_saving_capacity" class="form-control" placeholder="e.g. 15000" step="100" min="0" value="{{ prof.monthly_saving_capacity or '' }}">
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label" style="font-weight: 600;">Monthly Investment Capacity (INR)</label>
+                    <input type="number" name="monthly_investment_capacity" class="form-control" placeholder="e.g. 5000" step="100" min="0" value="{{ prof.monthly_investment_capacity or '' }}">
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label" style="font-weight: 600;">Financial Strategy / Strategy Notes</label>
+                    <textarea name="notes" class="form-control" placeholder="Describe your savings plan, targets or priorities...">{{ prof.notes or '' }}</textarea>
+                  </div>
+
+                  <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary px-4 py-2" style="border-radius: 10px;"><i class="bi bi-save me-1"></i> Save Settings</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Summary Stats Panel -->
+          <div class="col-lg-5">
+            <div class="panel">
+              <h4 style="font-weight: 800; color: var(--text-dark); margin-bottom: 20px;">Financial Dashboard Summary</h4>
+              
+              <div class="row g-3">
+                <div class="col-6">
+                  <div class="profile-stat-box">
+                    <div class="profile-stat-value text-primary">{{ goal_stats.total }}</div>
+                    <div class="profile-stat-label">Total Goals</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="profile-stat-box">
+                    <div class="profile-stat-value text-warning">{{ goal_stats.active }}</div>
+                    <div class="profile-stat-label">Active Goals</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="profile-stat-box">
+                    <div class="profile-stat-value text-success">{{ goal_stats.completed }}</div>
+                    <div class="profile-stat-label">Completed</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="profile-stat-box">
+                    <div class="profile-stat-value text-success">₹{{ goal_stats.total_saved|inr_format }}</div>
+                    <div class="profile-stat-label">Total Saved</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="profile-stat-box">
+                    <div class="profile-stat-value text-info">{{ inv_stats.total }}</div>
+                    <div class="profile-stat-label">Investments</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="profile-stat-box">
+                    <div class="profile-stat-value text-primary">₹{{ inv_stats.total_invested|inr_format }}</div>
+                    <div class="profile-stat-label">Total Invested</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Recommendations based on savings capacity -->
+              <div class="mt-4 p-3 bg-light border" style="border-radius: 12px; font-size: 0.88rem;">
+                <h6 style="font-weight: 700; color: var(--text-dark);"><i class="bi bi-lightbulb text-warning me-1"></i> Savings Planning Tip</h6>
+                {% if prof.monthly_saving_capacity and prof.monthly_saving_capacity > 0 %}
+                  <p class="text-muted mb-0 mt-1">Based on your monthly capacity of <strong>₹{{ prof.monthly_saving_capacity|inr_format }}</strong>, you are set up to fund short-term and emergency milestones easily. Ensure your priority goals are funded first!</p>
+                {% else %}
+                  <p class="text-muted mb-0 mt-1">Enter your monthly savings capacity on the left to activate smart capacity tips and financial health scoring.</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/cursor.js') }}"></script>
+</body>
+</html>
