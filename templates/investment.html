@@ -13,43 +13,139 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cursor.css') }}">
   <style>
-    .form-panel {
-      border-top: 4px solid #1E293B;
+    .invest-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-top: 20px;
     }
-    .preview-panel {
+    @media (max-width: 1200px) {
+      .invest-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 768px) {
+      .invest-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .invest-card {
       background: var(--white);
       border-radius: var(--border-radius-card);
+      border: 1px solid #E2E8F0;
       padding: 24px;
       box-shadow: var(--shadow);
-      position: sticky;
-      top: 20px;
-    }
-    .preview-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-dark);
-      margin-bottom: 18px;
       display: flex;
-      align-items: center;
-      gap: 8px;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .preview-row {
+    .invest-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+    }
+    .invest-card-header {
       display: flex;
       justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #F1F5F9;
-      font-size: 0.9rem;
+      align-items: flex-start;
+      margin-bottom: 15px;
     }
-    .preview-row:last-child {
-      border-bottom: 0;
+    .invest-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin: 0;
     }
-    .preview-label {
+    .invest-category-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .invest-amounts {
+      display: flex;
+      justify-content: space-between;
+      margin: 15px 0;
+      padding: 12px 14px;
+      background: #F8FAFC;
+      border-radius: 12px;
+    }
+    .amount-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .amount-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       color: var(--text-muted);
-      font-weight: 500;
+      font-weight: 600;
     }
-    .preview-value {
+    .amount-val {
+      font-size: 0.95rem;
       font-weight: 700;
       color: var(--text-dark);
+    }
+    .amount-val.saved {
+      color: var(--success);
+    }
+    .amount-val.remaining {
+      color: var(--orange);
+    }
+    .invest-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #F1F5F9;
+    }
+    .invest-date {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .nav-pills .nav-link {
+      background: #F1F5F9;
+      color: #475569;
+      font-weight: 600;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 8px 16px;
+    }
+    .nav-pills .nav-link.active {
+      background: #2563EB !important;
+      color: #FFFFFF !important;
+      border-color: #2563EB !important;
+    }
+    .form-panel {
+      border: 1px solid #E2E8F0;
+      border-radius: var(--border-radius-card);
+      padding: 28px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+    .form-control, .form-select {
+      border-radius: 8px;
+      border: 1px solid #CBD5E1;
+      padding: 10px 14px;
+      font-size: 0.92rem;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #3B82F6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    .summary-card-panel {
+      border: 1px solid #E2E8F0;
+      border-radius: var(--border-radius-card);
+      padding: 24px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+      margin-top: 24px;
     }
   </style>
 </head>
@@ -57,20 +153,14 @@
 <div id="cursor-dot"></div>
 <div id="cursor-ring"></div>
 
-<!-- Profile Chip -->
-<a href="{{ url_for('profile_page') }}" class="profile-chip-global" title="View Profile">
-  <div class="profile-chip-avatar">{{ user_name[0]|upper if user_name else 'A' }}</div>
-  <div class="profile-chip-info">
-    <span class="profile-chip-name">{{ user_name if user_name else 'Arjun Mehta' }}</span>
-  </div>
-</a>
+<!-- Sidebar toggle button -->
+<button class="floating-hamburger" id="sidebar-toggle-btn" type="button" title="Toggle Sidebar Menu">
+  <i class="bi bi-list"></i>
+</button>
 
-  <button class="floating-hamburger" id="sidebar-toggle-btn" type="button" title="Toggle Sidebar Menu">
-    <i class="bi bi-list"></i>
-  </button>
+<div class="d-flex">
 
-  <div class="d-flex">
-
+  <!-- Left Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="logo-row">
       <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="dash-nav-logo-img" style="width:42px;height:42px;">
@@ -80,15 +170,15 @@
       </div>
     </div>
     <nav class="nav-list">
-      <a href="{{ url_for('dashboard') }}" class="nav-item"><i class="bi bi-grid"></i><span>Dashboard</span></a>
-      <a href="{{ url_for('add_income') }}" class="nav-item"><i class="bi bi-cash-coin"></i><span>Income Management</span></a>
-      <a href="{{ url_for('add_expense') }}" class="nav-item"><i class="bi bi-wallet2"></i><span>Expense Management</span></a>
-      <a href="{{ url_for('add_budget') }}" class="nav-item"><i class="bi bi-pie-chart"></i><span>Budget Management</span></a>
-      <a href="{{ url_for('add_investment') }}" class="nav-item active"><i class="bi bi-graph-up-arrow"></i><span>Investment Tracking</span></a>
-      <a href="{{ url_for('goals_list') }}" class="nav-item"><i class="bi bi-flag"></i><span>Goals</span></a>
-      <a href="{{ url_for('profile_page') }}" class="nav-item"><i class="bi bi-person-circle"></i><span>Profile</span></a>
+      <a href="{{ url_for('dashboard') }}" class="nav-item{% if request.path == url_for('dashboard') %} active{% endif %}"><i class="bi bi-grid"></i><span>Dashboard</span></a>
+      <a href="{{ url_for('finances') }}" class="nav-item{% if request.path == url_for('finances') or request.path.startswith('/add-income') or request.path.startswith('/add-expense') or request.path.startswith('/add-budget') %} active{% endif %}"><i class="bi bi-wallet2"></i><span>Finances</span></a>
+      <a href="{{ url_for('add_investment') }}" class="nav-item{% if request.path == url_for('add_investment') %} active{% endif %}"><i class="bi bi-graph-up-arrow"></i><span>Investments</span></a>
+      <a href="{{ url_for('goals_list') }}" class="nav-item{% if request.path == url_for('goals_list') or '/goal/' in request.path or '/goal-planning' in request.path %} active{% endif %}"><i class="bi bi-flag"></i><span>Goals</span></a>
+      <a href="{{ url_for('health_score_page') }}" class="nav-item{% if request.path == url_for('health_score_page') %} active{% endif %}"><i class="bi bi-heart-pulse"></i><span>Health Score</span></a>
+      <a href="{{ url_for('transactions_page') }}" class="nav-item{% if request.path == url_for('transactions_page') %} active{% endif %}"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a>
+      <a href="{{ url_for('ai_insights') }}" class="nav-item{% if request.path == url_for('ai_insights') %} active{% endif %}"><i class="bi bi-robot"></i><span>AI Insights</span></a>
+      <a href="{{ url_for('profile_page') }}" class="nav-item{% if request.path == url_for('profile_page') %} active{% endif %}"><i class="bi bi-person-circle"></i><span>Profile</span></a>
     </nav>
-    
     <button class="sidebar-reset-btn" id="sidebar-reset-btn" type="button" onclick="if(confirm('Are you sure you want to reset all data to 0?')) { fetch('/api/reset-data', {method: 'POST'}).then(() => { window.location.href='/dashboard'; }); }" title="Reset all data to 0">
       <i class="bi bi-trash"></i><span>Reset Data</span>
     </button>
@@ -97,21 +187,37 @@
     </a>
   </aside>
 
+  <!-- Main Panel -->
   <main class="main-panel">
     <div class="content-stack">
 
-      <div class="page-hero invest-hero">
+      <!-- Top Profile Chip & Toggle Row -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <!-- Sidebar hamburger placeholder -->
+        <div></div>
+        <!-- Profile Chip -->
+        <div class="profile-chip" style="display: flex; align-items: center; gap: 10px; background: white; padding: 6px 16px; border-radius: 30px; border: 1px solid #E2E8F0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: #1E293B; color: white; display: grid; place-items: center; font-weight: 700; font-size: 0.9rem;">
+            {{ user_name[0]|upper if user_name else 'U' }}
+          </div>
+          <span style="font-weight: 600; color: #1E293B; font-size: 0.9rem;">{{ user_name }}</span>
+        </div>
+      </div>
+
+      <!-- Page Hero -->
+      <div class="page-hero invest-hero" style="background: linear-gradient(135deg, #1E293B 0%, #475569 100%);">
         <div class="hero-left">
           <div class="hero-icon-wrap invest-icon-wrap" style="background: rgba(255,255,255,0.25);">
-            <i class="bi bi-graph-up-arrow text-white"></i>
+            <i class="bi bi-graph-up text-white" style="font-size: 1.8rem;"></i>
           </div>
           <div>
-            <h1 class="hero-title">Investment Tracking</h1>
-            <p class="hero-subtitle">Record investments and grow your financial portfolio</p>
+            <h1 class="hero-title">Investments</h1>
+            <p class="hero-subtitle">Record and monitor your financial investments to grow your wealth</p>
           </div>
         </div>
       </div>
 
+      <!-- Flash Messages -->
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           {% for category, message in messages %}
@@ -124,121 +230,228 @@
         {% endif %}
       {% endwith %}
 
-      {% if error %}
-        <div class="page-alert alert-danger">
-          <i class="bi bi-exclamation-circle-fill"></i>
-          <span>{{ error }}</span>
-        </div>
-      {% endif %}
+      <!-- Set show_add tab selection variable -->
+      {% set show_add = (request.args.get('tab') == 'add') %}
 
-      <div class="row g-4">
-        <!-- Form Panel -->
-        <div class="col-lg-8">
-          <div class="panel form-panel">
-            <div class="form-panel-header d-flex align-items-center mb-4">
-              <div class="form-panel-icon bg-primary-subtle text-primary" style="width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 1.2rem; margin-right: 12px;">
-                <i class="bi bi-plus-circle"></i>
-              </div>
-              <div>
-                <h4 class="form-panel-title mb-0" style="font-weight: 700; color: var(--text-dark);">New Investment Entry</h4>
-                <p class="form-panel-desc mb-0 text-muted" style="font-size: 0.82rem;">Record your investment to track portfolio growth</p>
-              </div>
-            </div>
+      <!-- Tab Navigation (Bootstrap Pills) -->
+      <ul class="nav nav-pills gap-2 mb-4">
+        <li class="nav-item">
+          <button class="nav-link {% if not show_add %}active{% endif %}" id="tab-btn-list" onclick="switchInvestTab('list')">
+            <i class="bi bi-graph-up me-1"></i> My Investments
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link {% if show_add %}active{% endif %}" id="tab-btn-add" onclick="switchInvestTab('add')">
+            <i class="bi bi-plus-circle me-1"></i> Add Investment
+          </button>
+        </li>
+      </ul>
 
-            <form id="investment-form" action="{{ url_for('add_investment') }}" method="POST" novalidate>
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label for="invest-source" class="form-label" style="font-weight: 600;">Investment Source</label>
-                  <input type="text" id="invest-source" name="source" class="form-control" placeholder="e.g. Zerodha, Groww, HDFC MF" required>
-                </div>
+      <!-- ── TAB 1: Investments Grid ── -->
+      <div id="invest-tab-list" class="{% if show_add %}d-none{% endif %}">
+        {% if investments %}
+          <div class="invest-grid">
+            {% for inv in investments %}
+              {% set type_color = '#F59E0B' if inv.invest_type in ('Gold', 'Silver') else ('#3B82F6' if inv.invest_type == 'Stocks' else ('#10B981' if inv.invest_type == 'Mutual Fund' else '#64748B')) %}
+              {% set type_bg = 'rgba(245,158,11,0.12)' if inv.invest_type in ('Gold', 'Silver') else ('rgba(59,130,246,0.12)' if inv.invest_type == 'Stocks' else ('rgba(16,185,129,0.12)' if inv.invest_type == 'Mutual Fund' else 'rgba(100,116,139,0.12)')) %}
+              
+              <div class="invest-card" style="border-left: 4px solid {{ type_color }};">
+                <div>
+                  <div class="invest-card-header">
+                    <div>
+                      <h4 class="invest-title">{{ inv.source }}</h4>
+                      <span class="invest-category-badge" style="background: {{ type_bg }}; color: {{ type_color }};">
+                        {% if inv.invest_type == 'Stocks' %}
+                          <i class="bi bi-activity me-1"></i> Stocks
+                        {% elif inv.invest_type in ('Gold', 'Silver') %}
+                          <i class="bi bi-gem me-1"></i> Gold
+                        {% elif inv.invest_type == 'Mutual Fund' %}
+                          <i class="bi bi-wallet me-1"></i> Mutual Fund
+                        {% else %}
+                          <i class="bi bi-box me-1"></i> {{ inv.invest_type }}
+                        {% endif %}
+                      </span>
+                    </div>
+                    <span class="badge" style="border: 1px solid {{ type_color }}; color: {{ type_color }}; background: transparent; font-size: 0.78rem; border-radius: 4px; padding: 4px 8px;">Active</span>
+                  </div>
 
-                <div class="col-md-6">
-                  <label for="invest-type" class="form-label" style="font-weight: 600;">Investment Type</label>
-                  <select id="invest-type" name="invest_type" class="form-select">
-                    <option value="SIP">SIP (Systematic Investment Plan)</option>
-                    <option value="Stocks">Stocks / Equity</option>
-                    <option value="Mutual Fund">Mutual Fund</option>
-                    <option value="FD">Fixed Deposit (FD)</option>
-                    <option value="RD">Recurring Deposit (RD)</option>
-                    <option value="Crypto">Crypto</option>
-                    <option value="Gold">Gold / Silver</option>
-                    <option value="Real Estate">Real Estate</option>
-                    <option value="General" selected>General</option>
-                  </select>
-                </div>
-
-                <div class="col-md-6">
-                  <label for="invest-amount" class="form-label" style="font-weight: 600;">Amount Invested (₹)</label>
-                  <div class="input-group">
-                    <span class="input-group-text">₹</span>
-                    <input type="number" id="invest-amount" name="amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                  <div class="invest-amounts">
+                    <div class="amount-item">
+                      <span class="amount-label">Invested</span>
+                      <span class="amount-val">₹{{ inv.amount|inr_format }}</span>
+                    </div>
+                    <div class="amount-item">
+                      <span class="amount-label">Current</span>
+                      <span class="amount-val saved">₹{{ inv.current_value|inr_format }}</span>
+                    </div>
+                    <div class="amount-item">
+                      <span class="amount-label">Est. Return</span>
+                      <span class="amount-val saved">{{ inv.est_return }}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div class="col-md-6">
-                  <label for="invest-date" class="form-label" style="font-weight: 600;">Date of Investment</label>
-                  <input type="date" id="invest-date" name="invest_date" class="form-control" required>
-                </div>
+                <div class="invest-footer">
+                  <div class="invest-date">
+                    <i class="bi bi-calendar3"></i>
+                    <span>{{ inv.invest_date }}</span>
+                  </div>
 
-                <div class="col-12">
-                  <label for="invest-notes" class="form-label" style="font-weight: 600;">Notes (optional)</label>
-                  <textarea id="invest-notes" name="notes" class="form-control" placeholder="e.g. Monthly SIP for NIFTY 50 index fund..." rows="3"></textarea>
-                </div>
-
-                <div class="col-12 mt-4">
-                  <button type="submit" id="save-invest-btn" class="btn btn-primary px-4 py-2" style="border-radius: 10px;">
-                    <i class="bi bi-plus-circle-fill me-1"></i> Save Investment
-                  </button>
+                  <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-sm btn-outline-secondary" style="border-radius: 6px; font-size: 0.78rem; font-weight: 600;" onclick="alert('Portfolio tracking is fully set up for {{ inv.source }}. Auto-updating live rates every 24h!')">
+                      <i class="bi bi-clock-history me-1"></i> Track
+                    </button>
+                    <form action="{{ url_for('delete_investment', invest_id=inv.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Delete this investment record?')">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius: 6px; padding: 4px 8px;">
+                        <i class="bi bi-trash-fill"></i>
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </div>
-            </form>
+            {% endfor %}
           </div>
-        </div>
 
-        <!-- History Sidebar -->
-        <div class="col-lg-4">
-          <div class="preview-panel">
-            <h4 class="preview-title"><i class="bi bi-clock-history text-primary"></i> Recent Investments</h4>
-            <div id="recent-investment-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
-              <div class="text-center text-muted py-4">Loading entries...</div>
+          <!-- Investment Summary Row -->
+          <div class="summary-card-panel">
+            <h4 style="font-weight: 800; color: #1E293B; margin-bottom: 20px;">Investment Summary</h4>
+            <div class="row g-3">
+              <div class="col-md-3 col-6">
+                <div class="p-3 bg-light border" style="border-radius: 12px; text-align: center;">
+                  <div style="font-size: 0.78rem; color: #64748B; font-weight: 600; text-transform: uppercase;">Total Invested</div>
+                  <div style="font-size: 1.5rem; font-weight: 800; color: #1E293B; margin-top: 4px;">₹{{ inv_summary.total_invested|inr_format }}</div>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="p-3 bg-light border" style="border-radius: 12px; text-align: center;">
+                  <div style="font-size: 0.78rem; color: #64748B; font-weight: 600; text-transform: uppercase;">Current Value</div>
+                  <div style="font-size: 1.5rem; font-weight: 800; color: #10B981; margin-top: 4px;">₹{{ inv_summary.current_value|inr_format }}</div>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="p-3 bg-light border" style="border-radius: 12px; text-align: center;">
+                  <div style="font-size: 0.78rem; color: #64748B; font-weight: 600; text-transform: uppercase;">Net Profit/Loss</div>
+                  <div style="font-size: 1.5rem; font-weight: 800; color: #10B981; margin-top: 4px;">+₹{{ inv_summary.total_pl|inr_format }}</div>
+                </div>
+              </div>
+              <div class="col-md-3 col-6">
+                <div class="p-3 bg-light border" style="border-radius: 12px; text-align: center;">
+                  <div style="font-size: 0.78rem; color: #64748B; font-weight: 600; text-transform: uppercase;">Avg. Return Rate</div>
+                  <div style="font-size: 1.5rem; font-weight: 800; color: #10B981; margin-top: 4px;">+{{ inv_summary.avg_return }}%</div>
+                </div>
+              </div>
             </div>
           </div>
+        {% else %}
+          <div class="panel text-center py-5 mt-4" style="border-radius: 16px;">
+            <i class="bi bi-graph-up text-muted" style="font-size: 3rem; display: block; margin-bottom: 12px;"></i>
+            <h5 style="font-weight: 700; color: var(--text-dark);">No investments recorded yet</h5>
+            <p class="text-muted" style="font-size: 0.9rem;">Start tracking your stocks, mutual funds, or gold today!</p>
+            <button class="btn btn-primary mt-2" style="border-radius: 8px; font-weight: 600; background-color: #2563EB; border-color: #2563EB;" onclick="switchInvestTab('add')">
+              <i class="bi bi-plus-lg me-1"></i> Add Your First Investment
+            </button>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- ── TAB 2: Add Investment Form ── -->
+      <div id="invest-tab-form" class="{% if not show_add %}d-none{% endif %}">
+        <div class="form-panel p-4">
+          <div class="d-flex align-items-center mb-4">
+            <div style="width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 1.2rem; margin-right: 12px; background: rgba(37,99,235,0.1); color: #2563EB;">
+              <i class="bi bi-plus-circle-fill"></i>
+            </div>
+            <div>
+              <h4 class="mb-0" style="font-weight: 700; color: var(--text-dark);">New Investment Entry</h4>
+              <p class="mb-0 text-muted" style="font-size: 0.82rem;">Record your investment to track portfolio growth</p>
+            </div>
+          </div>
+
+          <form id="investment-form" action="{{ url_for('add_investment') }}" method="POST">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="invest-source" class="form-label" style="font-weight: 600; color: #334155; font-size: 0.9rem;">Investment Source</label>
+                <input type="text" id="invest-source" name="source" class="form-control" placeholder="e.g. Zerodha, Groww, HDFC MF" required>
+              </div>
+
+              <div class="col-md-6">
+                <label for="invest-type" class="form-label" style="font-weight: 600; color: #334155; font-size: 0.9rem;">Investment Type</label>
+                <select id="invest-type" name="invest_type" class="form-select">
+                  <option value="Stocks">Stocks</option>
+                  <option value="Gold">Gold</option>
+                  <option value="Mutual Fund">Mutual Fund</option>
+                  <option value="Real Estate">Real Estate</option>
+                  <option value="Crypto">Crypto</option>
+                  <option value="General" selected>General</option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label for="invest-amount" class="form-label" style="font-weight: 600; color: #334155; font-size: 0.9rem;">Amount Invested (₹)</label>
+                <input type="number" id="invest-amount" name="amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+              </div>
+
+              <div class="col-md-6">
+                <label for="invest-date" class="form-label" style="font-weight: 600; color: #334155; font-size: 0.9rem;">Date of Investment</label>
+                <input type="date" id="invest-date" name="invest_date" class="form-control" required>
+              </div>
+
+              <div class="col-12">
+                <label for="invest-notes" class="form-label" style="font-weight: 600; color: #334155; font-size: 0.9rem;">Notes (optional)</label>
+                <textarea id="invest-notes" name="notes" class="form-control" placeholder="e.g. Monthly SIP for NIFTY 50 index fund..." rows="4"></textarea>
+              </div>
+
+              <div class="col-12 mt-4 d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary px-4 py-2" style="border-radius: 8px; font-weight: 600; font-size: 0.9rem;" onclick="switchInvestTab('list')">Cancel</button>
+                <button type="submit" id="save-invest-btn" class="btn btn-primary px-4 py-2 d-flex align-items-center gap-2" style="border-radius: 8px; font-weight: 600; font-size: 0.9rem; background-color: #2563EB; border-color: #2563EB;">
+                  <i class="bi bi-save"></i> Save Investment
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
+
     </div>
   </main>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/cursor.js') }}"></script>
 <script>
+  function switchInvestTab(tab) {
+    const listTab = document.getElementById('invest-tab-list');
+    const formTab = document.getElementById('invest-tab-form');
+    const btnList = document.getElementById('tab-btn-list');
+    const btnAdd = document.getElementById('tab-btn-add');
+
+    if (tab === 'add') {
+      listTab.classList.add('d-none');
+      formTab.classList.remove('d-none');
+      btnList.classList.remove('active');
+      btnAdd.classList.add('active');
+      
+      // Auto set today's date in form date field
+      const dateField = document.getElementById('invest-date');
+      if (dateField && !dateField.value) {
+        const today = new Date().toISOString().split('T')[0];
+        dateField.value = today;
+      }
+    } else {
+      listTab.classList.remove('d-none');
+      formTab.classList.add('d-none');
+      btnList.classList.add('active');
+      btnAdd.classList.remove('active');
+    }
+  }
+
+  // Pre-select tab based on URL query parameter if present
   document.addEventListener('DOMContentLoaded', () => {
-    fetch('/api/recent-transactions')
-      .then(r => r.json())
-      .then(data => {
-        const list = document.getElementById('recent-investment-list');
-        list.innerHTML = '';
-        const investments = data.filter(t => t.type === 'investment');
-        if (investments.length === 0) {
-          list.innerHTML = '<div class="text-center text-muted py-3">No recent investments found.</div>';
-          return;
-        }
-        investments.slice(0, 5).forEach(inv => {
-          const item = document.createElement('div');
-          item.className = 'preview-row';
-          item.innerHTML = `
-            <div style="display: flex; flex-direction: column;">
-              <span class="preview-label" style="color: var(--text-dark); font-weight: 600;">${inv.title || inv.category}</span>
-              <span style="font-size: 0.75rem; color: var(--text-muted);">${inv.date}</span>
-            </div>
-            <span class="preview-value text-primary">₹${(inv.amount || 0).toLocaleString('en-IN')}</span>
-          `;
-          list.appendChild(item);
-        });
-      })
-      .catch(() => {
-        document.getElementById('recent-investment-list').innerHTML = '<div class="text-center text-muted py-3">Failed to load entries.</div>';
-      });
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'add') {
+      switchInvestTab('add');
+    }
   });
 </script>
 </body>

@@ -15,9 +15,19 @@
   <style>
     .goal-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 20px;
       margin-top: 20px;
+    }
+    @media (max-width: 1200px) {
+      .goal-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 768px) {
+      .goal-grid {
+        grid-template-columns: 1fr;
+      }
     }
     .goal-card {
       background: var(--white);
@@ -87,6 +97,11 @@
     .progress-section {
       margin-top: 10px;
     }
+    .goal-progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.6s ease;
+    }
     .progress-header {
       display: flex;
       justify-content: space-between;
@@ -133,8 +148,21 @@
       color: var(--danger);
       border-color: #FCA5A5;
     }
+    .nav-pills .nav-link {
+      background: #F1F5F9;
+      color: #475569;
+      font-weight: 600;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 8px 16px;
+    }
+    .nav-pills .nav-link.active {
+      background: #0F172A !important;
+      color: #FFFFFF !important;
+      border-color: #0F172A !important;
+    }
     .filters-row {
-      border-top: 4px solid #1E293B;
+      border: 1px solid #E2E8F0;
       background: var(--white);
       border-radius: var(--border-radius-card);
       padding: 20px;
@@ -219,52 +247,66 @@
 
   <div class="d-flex">
 
-    <aside class="sidebar" id="sidebar">
-      <div class="logo-row">
-        <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="dash-nav-logo-img" style="width:42px;height:42px;">
-        <div class="logo-text">
-          <h3>FinSight</h3>
-          <small>Smart. Secure. Simple.</small>
-        </div>
+      <!-- Left Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="logo-row">
+      <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="dash-nav-logo-img" style="width:42px;height:42px;">
+      <div class="logo-text">
+        <h3>FinSight</h3>
+        <small>Smart. Secure. Simple.</small>
       </div>
-      <nav class="nav-list">
-        <a href="{{ url_for('dashboard') }}" class="nav-item"><i class="bi bi-grid"></i><span>Dashboard</span></a>
-        <a href="{{ url_for('add_income') }}" class="nav-item"><i class="bi bi-cash-coin"></i><span>Income Management</span></a>
-        <a href="{{ url_for('add_expense') }}" class="nav-item"><i class="bi bi-wallet2"></i><span>Expense Management</span></a>
-        <a href="{{ url_for('add_budget') }}" class="nav-item"><i class="bi bi-pie-chart"></i><span>Budget Management</span></a>
-        <a href="{{ url_for('add_investment') }}" class="nav-item"><i class="bi bi-graph-up-arrow"></i><span>Investment Tracking</span></a>
-        <a href="{{ url_for('goals_list') }}" class="nav-item active"><i class="bi bi-flag"></i><span>Goals</span></a>
-        <a href="{{ url_for('profile_page') }}" class="nav-item"><i class="bi bi-person-circle"></i><span>Profile</span></a>
-      </nav>
-      
-      <button class="sidebar-reset-btn" id="sidebar-reset-btn" type="button" onclick="if(confirm('Are you sure you want to reset all data to 0?')) { fetch('/api/reset-data', {method: 'POST'}).then(() => { window.location.href='/dashboard'; }); }" title="Reset all data to 0">
-        <i class="bi bi-trash"></i><span>Reset Data</span>
-      </button>
-      <a href="{{ url_for('logout') }}" class="sidebar-logout-btn" title="Logout from session">
-        <i class="bi bi-box-arrow-right"></i><span>Logout</span>
-      </a>
-    </aside>
+    </div>
+    <nav class="nav-list">
+      <a href="{{ url_for('dashboard') }}" class="nav-item{% if request.path == url_for('dashboard') %} active{% endif %}"><i class="bi bi-grid"></i><span>Dashboard</span></a>
+      <a href="{{ url_for('finances') }}" class="nav-item{% if request.path == url_for('finances') or request.path.startswith('/add-income') or request.path.startswith('/add-expense') or request.path.startswith('/add-budget') %} active{% endif %}"><i class="bi bi-wallet2"></i><span>Finances</span></a>
+      <a href="{{ url_for('add_investment') }}" class="nav-item{% if request.path == url_for('add_investment') %} active{% endif %}"><i class="bi bi-graph-up-arrow"></i><span>Investments</span></a>
+      <a href="{{ url_for('goals_list') }}" class="nav-item{% if request.path == url_for('goals_list') or '/goal/' in request.path or '/goal-planning' in request.path %} active{% endif %}"><i class="bi bi-flag"></i><span>Goals</span></a>
+      <a href="{{ url_for('health_score_page') }}" class="nav-item{% if request.path == url_for('health_score_page') %} active{% endif %}"><i class="bi bi-heart-pulse"></i><span>Health Score</span></a>
+      <a href="{{ url_for('transactions_page') }}" class="nav-item{% if request.path == url_for('transactions_page') %} active{% endif %}"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a>
+      <a href="{{ url_for('ai_insights') }}" class="nav-item{% if request.path == url_for('ai_insights') %} active{% endif %}"><i class="bi bi-robot"></i><span>AI Insights</span></a>
+      <a href="{{ url_for('profile_page') }}" class="nav-item{% if request.path == url_for('profile_page') %} active{% endif %}"><i class="bi bi-person-circle"></i><span>Profile</span></a>
+    </nav>
+    <button class="sidebar-reset-btn" id="sidebar-reset-btn" type="button" onclick="if(confirm('Are you sure you want to reset all data to 0?')) { fetch('/api/reset-data', {method: 'POST'}).then(() => { window.location.href='/dashboard'; }); }" title="Reset all data to 0">
+      <i class="bi bi-trash"></i><span>Reset Data</span>
+    </button>
+    <a href="{{ url_for('logout') }}" class="sidebar-logout-btn" title="Logout from session">
+      <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+    </a>
+  </aside>
 
     <main class="main-panel">
       <div class="content-stack">
 
-        <!-- Page Hero -->
-        <div class="page-hero goals-hero">
-          <div class="hero-left">
-            <div class="hero-icon-wrap dash-icon-wrap" style="background: rgba(255,255,255,0.25);">
-              <i class="bi bi-flag text-white"></i>
-            </div>
-            <div>
-              <h1 class="hero-title">Financial Goals</h1>
-              <p class="hero-subtitle">Manage and track your saving milestones and smart timelines</p>
-            </div>
+      <!-- Top Profile Chip & Toggle Row -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <!-- Sidebar hamburger placeholder -->
+        <div></div>
+        <!-- Profile Chip -->
+        <div class="profile-chip" style="display: flex; align-items: center; gap: 10px; background: white; padding: 6px 16px; border-radius: 30px; border: 1px solid #E2E8F0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: #1E293B; color: white; display: grid; place-items: center; font-weight: 700; font-size: 0.9rem;">
+            {{ user_name[0]|upper if user_name else 'U' }}
           </div>
-          <div class="hero-stats">
-            <button class="btn btn-primary" style="border-radius: 12px; font-weight: 600;" onclick="switchGoalTab('planning')">
-              <i class="bi bi-plus-lg me-1"></i> Create Goal
-            </button>
+          <span style="font-weight: 600; color: #1E293B; font-size: 0.9rem;">{{ user_name }}</span>
+        </div>
+      </div>
+
+      <!-- Page Hero -->
+      <div class="page-hero goals-hero" style="background: linear-gradient(135deg, #1E293B 0%, #475569 100%);">
+        <div class="hero-left">
+          <div class="hero-icon-wrap dash-icon-wrap" style="background: rgba(255,255,255,0.25);">
+            <i class="bi bi-flag text-white"></i>
+          </div>
+          <div>
+            <h1 class="hero-title">Financial Goals</h1>
+            <p class="hero-subtitle">Manage and track your saving milestones and smart timelines</p>
           </div>
         </div>
+        <div class="hero-stats">
+          <button class="btn btn-primary d-flex align-items-center gap-1" style="border-radius: 8px; font-weight: 600; background-color: #2563EB; border-color: #2563EB; font-size: 0.9rem; padding: 8px 16px;" onclick="switchGoalTab('planning')">
+            <i class="bi bi-plus-lg"></i> Create
+          </button>
+        </div>
+      </div>
 
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -291,7 +333,7 @@
           </li>
           <li class="nav-item">
             <button class="nav-link {% if show_planning %}active{% endif %}" id="tab-btn-planning" onclick="switchGoalTab('planning')">
-              <i class="bi bi-calculator-fill me-1"></i> {% if edit %}Edit Goal{% else %}Goal Planning{% endif %}
+              <i class="bi bi-journal-text me-1"></i> {% if edit %}Edit Goal{% else %}Goal Planning{% endif %}
             </button>
           </li>
         </ul>
@@ -393,8 +435,8 @@
                         <span class="progress-pct">{{ goal.progress_percentage }}% Complete</span>
                         <span class="badge rounded-pill bg-{{ goal.smart_status_class }}">{{ goal.smart_status }}</span>
                       </div>
-                      <div class="progress" style="height: 8px; border-radius: 999px;">
-                        <div class="progress-bar bg-{{ goal.smart_status_class }}" role="progressbar" style="width: {{ goal.progress_percentage }}%"></div>
+                      <div class="progress" style="height: 8px; border-radius: 999px; background-color: #E2E8F0; overflow: hidden;">
+                        <div class="goal-progress-fill" style="width: {{ goal.progress_percentage }}%; background-color: {% if goal.smart_status_class == 'success' %}#10B981{% elif goal.smart_status_class == 'warning' %}#F59E0B{% elif goal.smart_status_class == 'danger' %}#EF4444{% else %}#64748B{% endif %};"></div>
                       </div>
                     </div>
                   </div>

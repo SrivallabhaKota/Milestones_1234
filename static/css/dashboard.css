@@ -165,13 +165,15 @@ body.sidebar-open .floating-hamburger {
   flex: 1;
   padding: 86px 24px 30px;
   margin-left: 0;
-  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: margin-left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   width: 100%;
 }
 
-body.sidebar-open .main-panel {
-  transform: translateX(260px);
-  width: calc(100% - 260px);
+@media (min-width: 993px) {
+  body.sidebar-open .main-panel {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+  }
 }
 
 

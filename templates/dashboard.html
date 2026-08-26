@@ -62,6 +62,7 @@
 <div class="d-flex">
 
   <!-- Left Sidebar -->
+    <!-- Left Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="logo-row">
       <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="dash-nav-logo-img" style="width:42px;height:42px;">
@@ -71,20 +72,19 @@
       </div>
     </div>
     <nav class="nav-list">
-      <a href="{{ url_for('dashboard') }}" class="nav-item active"><i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span></a>
-      <a href="{{ url_for('add_income') }}" class="nav-item"><i class="bi bi-cash-coin"></i><span>Income</span></a>
-      <a href="{{ url_for('add_expense') }}" class="nav-item"><i class="bi bi-wallet2"></i><span>Expenses</span></a>
-      <a href="{{ url_for('add_budget') }}" class="nav-item"><i class="bi bi-pie-chart-fill"></i><span>Budget</span></a>
-      <a href="{{ url_for('add_investment') }}" class="nav-item"><i class="bi bi-graph-up-arrow"></i><span>Investments</span></a>
-      <a href="{{ url_for('goals_list') }}" class="nav-item"><i class="bi bi-flag-fill"></i><span>Goals</span></a>
-      <a href="{{ url_for('profile_page') }}" class="nav-item"><i class="bi bi-person-circle"></i><span>Profile</span></a>
+      <a href="{{ url_for('dashboard') }}" class="nav-item{% if request.path == url_for('dashboard') %} active{% endif %}"><i class="bi bi-grid"></i><span>Dashboard</span></a>
+      <a href="{{ url_for('finances') }}" class="nav-item{% if request.path == url_for('finances') or request.path.startswith('/add-income') or request.path.startswith('/add-expense') or request.path.startswith('/add-budget') %} active{% endif %}"><i class="bi bi-wallet2"></i><span>Finances</span></a>
+      <a href="{{ url_for('add_investment') }}" class="nav-item{% if request.path == url_for('add_investment') %} active{% endif %}"><i class="bi bi-graph-up-arrow"></i><span>Investments</span></a>
+      <a href="{{ url_for('goals_list') }}" class="nav-item{% if request.path == url_for('goals_list') or '/goal/' in request.path or '/goal-planning' in request.path %} active{% endif %}"><i class="bi bi-flag"></i><span>Goals</span></a>
+      <a href="{{ url_for('health_score_page') }}" class="nav-item{% if request.path == url_for('health_score_page') %} active{% endif %}"><i class="bi bi-heart-pulse"></i><span>Health Score</span></a>
+      <a href="{{ url_for('transactions_page') }}" class="nav-item{% if request.path == url_for('transactions_page') %} active{% endif %}"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a>
+      <a href="{{ url_for('ai_insights') }}" class="nav-item{% if request.path == url_for('ai_insights') %} active{% endif %}"><i class="bi bi-robot"></i><span>AI Insights</span></a>
+      <a href="{{ url_for('profile_page') }}" class="nav-item{% if request.path == url_for('profile_page') %} active{% endif %}"><i class="bi bi-person-circle"></i><span>Profile</span></a>
     </nav>
-    <button class="sidebar-reset-btn" id="sidebar-reset-btn" type="button"
-      onclick="if(confirm('Reset all data to 0?')){fetch('/api/reset-data',{method:'POST'}).then(()=>window.location.href='/dashboard');}"
-      title="Reset all data">
+    <button class="sidebar-reset-btn" id="sidebar-reset-btn" type="button" onclick="if(confirm('Are you sure you want to reset all data to 0?')) { fetch('/api/reset-data', {method: 'POST'}).then(() => { window.location.href='/dashboard'; }); }" title="Reset all data to 0">
       <i class="bi bi-trash"></i><span>Reset Data</span>
     </button>
-    <a href="{{ url_for('logout') }}" class="sidebar-logout-btn" title="Logout">
+    <a href="{{ url_for('logout') }}" class="sidebar-logout-btn" title="Logout from session">
       <i class="bi bi-box-arrow-right"></i><span>Logout</span>
     </a>
   </aside>
@@ -139,8 +139,8 @@
         </div>
       </div>
 
-      <!-- Three Column: Doughnut + Transactions + Insights -->
-      <section class="three-col" style="margin-bottom:24px;">
+      <!-- Two Column: Doughnut + Insights -->
+      <section class="three-col" style="margin-bottom:24px; grid-template-columns: repeat(2, minmax(0, 1fr));">
         <article class="panel analytics-panel">
           <div class="panel-title-row" style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
@@ -155,14 +155,6 @@
           <div class="footer-strip">
             <div class="summary-pill"><i class="bi bi-wallet2"></i><span id="savings-diff-text">Live financial breakdown</span></div>
           </div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-title-row">
-            <h4>Recent Transactions</h4>
-            <a class="link-blue" href="{{ url_for('add_expense') }}">View All &#8594;</a>
-          </div>
-          <div class="transaction-list"></div>
         </article>
 
         <article class="panel">
@@ -276,8 +268,8 @@
       var username=el.getAttribute('data-username')||'User';
       var hour=now.getHours();
       var greet=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
-      var emoji=hour<12?'\u2600\ufe0f':hour<17?'\u26c5':'\ud83c\udf19';
-      el.textContent=greet+', '+username+'! '+emoji;
+      var emoji=hour<12?'☀️':hour<17?'⛅':'🌙';
+      el.innerHTML=greet+', '+username+'! <span style="color: initial !important; -webkit-text-fill-color: initial !important;">'+emoji+'</span>';
     }
   })();
 </script>
