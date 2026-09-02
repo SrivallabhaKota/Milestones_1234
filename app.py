@@ -76,52 +76,42 @@ def init_db():
         
 
     try:
+        db_name = app.config.get('MYSQL_DB', 'finsight')
+        try:
+            conn = pymysql.connect(
+                host=app.config['MYSQL_HOST'],
+                port=int(app.config['MYSQL_PORT']),
+                user=app.config['MYSQL_USER'],
+                password=app.config['MYSQL_PASSWORD'],
+                database=db_name,
+                autocommit=True,
+                **ssl_config
+            )
+        except Exception:
+            # Fallback for creating database if it doesn't exist yet on default database
+            conn = pymysql.connect(
+                host=app.config['MYSQL_HOST'],
+                port=int(app.config['MYSQL_PORT']),
+                user=app.config['MYSQL_USER'],
+                password=app.config['MYSQL_PASSWORD'],
+                database='test',
+                autocommit=True,
+                **ssl_config
+            )
+            with conn.cursor() as cur:
+                cur.execute(f"CREATE DATABASE IF NOT EXISTS {db_name} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
+            conn.close()
 
-        conn = pymysql.connect(
+            conn = pymysql.connect(
+                host=app.config['MYSQL_HOST'],
+                port=int(app.config['MYSQL_PORT']),
+                user=app.config['MYSQL_USER'],
+                password=app.config['MYSQL_PASSWORD'],
+                database=db_name,
+                autocommit=True,
+                **ssl_config
+            )
 
-            host=app.config['MYSQL_HOST'],
-
-            port=int(app.config['MYSQL_PORT']),
-
-            user=app.config['MYSQL_USER'],
-
-            password=app.config['MYSQL_PASSWORD'],
-
-            autocommit=True,
-
-            **ssl_config
-
-        )
-
-        with conn.cursor() as cur:
-
-            # Dynamically use MYSQL_DB
-
-            db_name = app.config['MYSQL_DB']
-
-            cur.execute(f"CREATE DATABASE IF NOT EXISTS {db_name} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
-
-        conn.close()
-
-        
-
-        conn = pymysql.connect(
-
-            host=app.config['MYSQL_HOST'],
-
-            port=int(app.config['MYSQL_PORT']),
-
-            user=app.config['MYSQL_USER'],
-
-            password=app.config['MYSQL_PASSWORD'],
-
-            database=app.config['MYSQL_DB'],
-
-            autocommit=True,
-
-            **ssl_config
-
-        )
 
         with conn.cursor() as cur:
 
@@ -1710,7 +1700,7 @@ def api_reset_data():
 
 # ═══════════════════════════════════════════════════════════════════
 
-# GOAL PLANNING & PROFILE HELPERS (from Milestone 2)
+# GOAL PLANNING & PROFILE HELPERS 
 
 # ═══════════════════════════════════════════════════════════════════
 
