@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FinSight - Financial Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cursor.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/smart_dash.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <style>
+    /* ── Report Page Clean Layout (Matching AI Insights) ── */
+    .download-btns {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .dl-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: #ffffff !important;
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    }
+    .dl-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+      color: #ffffff !important;
+    }
+    .dl-btn-word { background: linear-gradient(135deg, #2563EB, #1D4ED8); }
+    .dl-btn-excel { background: linear-gradient(135deg, #16A34A, #15803D); }
+    .dl-btn-pdf { background: linear-gradient(135deg, #DC2626, #B91C1C); }
+
+    /* Clean Full-Width Panel Cards */
+    .rpt-panel {
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 26px 30px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+      border: 1px solid #E2E8F0;
+      transition: all 0.25s ease;
+    }
+    body.dark-mode .rpt-panel {
+      background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%) !important;
+      border-color: rgba(99, 102, 241, 0.35) !important;
+      box-shadow: 0 8px 32px rgba(15, 23, 42, 0.4) !important;
+    }
+
+    .rpt-panel-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    body.dark-mode .rpt-panel-title {
+      color: #FFFFFF !important;
+    }
+
+    /* KPI Summary Cards */
+    .rpt-kpi-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 22px 20px;
+      text-align: center;
+      height: 100%;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    body.dark-mode .rpt-kpi-card {
+      background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%) !important;
+      border-color: rgba(99, 102, 241, 0.35) !important;
+      box-shadow: 0 4px 20px rgba(49, 46, 129, 0.35) !important;
+    }
+    .rpt-kpi-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+    .rpt-kpi-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      margin-bottom: 12px;
+    }
+    .rpt-kpi-green .rpt-kpi-icon { background: rgba(16,185,129,0.15); color: #10B981; }
+    .rpt-kpi-red .rpt-kpi-icon   { background: rgba(239,68,68,0.15); color: #EF4444; }
+    .rpt-kpi-blue .rpt-kpi-icon  { background: rgba(59,130,246,0.15); color: #3B82F6; }
+    .rpt-kpi-purple .rpt-kpi-icon{ background: rgba(139,92,246,0.15); color: #8B5CF6; }
+    .rpt-kpi-orange .rpt-kpi-icon{ background: rgba(245,158,11,0.15); color: #F59E0B; }
+
+    .rpt-kpi-label {
+      font-size: 0.76rem;
+      color: #64748B;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    body.dark-mode .rpt-kpi-label { color: #C7D2FE !important; }
+
+    .rpt-kpi-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #0F172A;
+    }
+    body.dark-mode .rpt-kpi-value { color: #FFFFFF !important; }
+
+    /* Budget Progress Box */
+    .budget-progress-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-top: 16px;
+    }
+    body.dark-mode .budget-progress-box {
+      background: rgba(49, 46, 129, 0.45) !important;
+      border-color: rgba(99, 102, 241, 0.35) !important;
+    }
+    .budget-bar-bg {
+      width: 100%;
+      height: 12px;
+      background: #E2E8F0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    body.dark-mode .budget-bar-bg { background: rgba(255,255,255,0.1) !important; }
+    .budget-bar-fill {
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.6s ease;
+    }
+
+        /* Bootstrap Table Override — No White Boxes, Clean Dark Panel Background */
+    .rpt-table,
+    .rpt-table > :not(caption) > * > * {
+      background-color: transparent !important;
+    }
+
+    .rpt-table thead th {
+      background-color: #EEF2FF !important;
+      color: #4338CA !important;
+      font-weight: 700;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 14px 18px;
+      border-bottom: 2px solid #C7D2FE !important;
+    }
+    
+    .rpt-table tbody td {
+      padding: 14px 18px;
+      color: #0F172A !important;
+      background-color: transparent !important;
+      border-bottom: 1px solid #E2E8F0 !important;
+      font-size: 0.9rem;
+    }
+
+    .rpt-table .total-row td {
+      font-weight: 800;
+      color: #0F172A !important;
+      background-color: #EEF2FF !important;
+      border-top: 2px solid #C7D2FE !important;
+    }
+
+    /* Dark Mode Table Overrides */
+    body.dark-mode .rpt-table,
+    body.dark-mode .rpt-table > :not(caption) > * > * {
+      background-color: transparent !important;
+      color: #F8FAFC !important;
+    }
+
+    body.dark-mode .rpt-table thead th {
+      background-color: rgba(99, 102, 241, 0.22) !important;
+      color: #A5B4FC !important;
+      border-bottom: 2px solid rgba(99, 102, 241, 0.35) !important;
+    }
+
+    body.dark-mode .rpt-table tbody td {
+      color: #F8FAFC !important;
+      background-color: transparent !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.dark-mode .rpt-table .total-row td {
+      color: #FFFFFF !important;
+      background-color: rgba(99, 102, 241, 0.15) !important;
+      border-top: 2px solid rgba(99, 102, 241, 0.35) !important;
+    }
+
+    /* Goals Badge & Progress */
+    .goal-progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: #E2E8F0;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    body.dark-mode .goal-progress-bar-bg { background: rgba(255,255,255,0.1) !important; }
+    .goal-progress-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #8B5CF6, #6366F1);
+    }
+    .goal-status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-active    { background: rgba(16,185,129,0.15); color: #10B981; }
+    .badge-completed { background: rgba(59,130,246,0.15); color: #3B82F6; }
+    .badge-paused    { background: rgba(245,158,11,0.15); color: #F59E0B; }
+
+    /* Health Score Circle */
+    .health-score-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 36px;
+      flex-wrap: wrap;
+    }
+    .health-circle {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: conic-gradient(#6366F1 calc(var(--score) * 3.6deg), #E2E8F0 0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    body.dark-mode .health-circle {
+      background: conic-gradient(#6366F1 calc(var(--score) * 3.6deg), rgba(255,255,255,0.08) 0) !important;
+    }
+    .health-circle-inner {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    body.dark-mode .health-circle-inner { background: #0F172A !important; }
+    .health-circle-inner .score-num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.6rem;
+      font-weight: 900;
+      color: #6366F1;
+      line-height: 1;
+    }
+    .health-circle-inner .score-label {
+      font-size: 0.7rem;
+      color: #64748B;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .health-summary-text {
+      max-width: 360px;
+      color: #475569;
+      font-size: 0.92rem;
+      line-height: 1.7;
+    }
+    body.dark-mode .health-summary-text { color: #94A3B8 !important; }
+    .health-summary-text strong { color: #0F172A; }
+    body.dark-mode .health-summary-text strong { color: #F8FAFC !important; }
+  </style>
+</head>
+<body class="theme-dash">
+  <!-- Full Page Preloader -->
+  <div id="page-preloader">
+    <div class="preloader-content">
+      <div class="preloader-logo-wrapper">
+        <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="preloader-logo">
+        <div class="preloader-pulse-ring"></div>
+      </div>
+      <div class="preloader-text">Loading<span class="dots">...</span></div>
+      <div class="preloader-spinner"></div>
+    </div>
+  </div>
+
+  <div id="cursor-dot"></div>
+  <div id="cursor-ring"></div>
+
+  <!-- Top Left Home Button -->
+<!-- Fixed Top Right Header Controls -->
+  <div class="top-header-bar-right">
+    <button class="notif-bell-btn" id="notif-bell-btn" type="button" title="Financial Alerts">
+      <i class="bi bi-bell-fill"></i>
+      <span class="notif-badge hidden" id="notif-badge">0</span>
+    </button>
+    <button class="theme-toggle-btn" id="theme-toggle-btn" type="button" title="Toggle Dark/Light Mode">
+      <i class="bi bi-sun-fill" style="color: #FBBF24;"></i>
+    </button>
+    <a href="{{ url_for('profile_page') }}" class="profile-chip-global" title="View Profile">
+      {% if profile_pic %}
+        <img src="{{ url_for('static', filename=profile_pic) }}" alt="Profile Pic" class="profile-chip-img" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+      {% else %}
+        <div class="profile-chip-avatar">{{ user_name[0]|upper if user_name else 'U' }}</div>
+      {% endif %}
+      <div class="profile-chip-info">
+        <span class="profile-chip-name">{{ user_name if user_name else 'User' }}</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- Financial Alerts Slide-out Panel -->
+  <div class="alert-panel-overlay" id="alert-panel-overlay"></div>
+  <div class="alert-panel" id="alert-panel">
+    <div class="alert-panel-header">
+      <h3><i class="bi bi-shield-exclamation"></i> Financial Alerts</h3>
+      <button class="alert-panel-close" id="alert-panel-close" type="button"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="alert-panel-actions" style="display: flex; gap: 8px; justify-content: space-between; align-items: center;">
+      <span class="alert-count-badge" id="alert-count-text">0 Unread</span>
+      <div style="display: flex; gap: 6px;">
+        <button class="mark-all-read-btn" id="mark-all-read-btn" type="button" style="white-space: nowrap;">✓ Mark Read</button>
+        <button class="clear-all-btn" id="clear-all-btn" type="button" style="background:none;border:1px solid rgba(255,255,255,0.18);color:#EF4444;font-size:0.73rem;padding:4px 10px;border-radius:100px;cursor:pointer;transition:all 0.2s;white-space: nowrap;">🗑 Clear All</button>
+      </div>
+    </div>
+    <div class="alert-filter-section">
+      <div class="alert-filter-header">
+        <span><i class="bi bi-funnel-fill me-1"></i> Filter Messages</span>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button type="button" id="alert-filter-all-btn" class="alert-filter-btn active">
+            <i class="bi bi-collection-fill me-1"></i> All
+          </button>
+          <button type="button" id="alert-filter-reset-btn" class="alert-filter-reset" style="display:none;">
+            <i class="bi bi-arrow-counterclockwise"></i> Clear
+          </button>
+        </div>
+      </div>
+      <div class="alert-filter-inputs" style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+        <label for="alert-date-filter" style="font-size: 0.73rem; color: #94A3B8; margin: 0; font-weight: 500; white-space: nowrap;">
+          <i class="bi bi-calendar-event me-1"></i> Select Day:
+        </label>
+        <input type="date" id="alert-date-filter" class="alert-input-control" style="max-width: 170px;" />
+      </div>
+      <div id="alert-filter-info" class="alert-filter-status" style="display: none;">
+        <i class="bi bi-filter"></i> Filtering: <span id="alert-filter-status-text"></span>
+      </div>
+    </div>
+    <div class="alert-list" id="alert-list">
+      <div class="alert-empty"><i class="bi bi-check2-circle"></i>No alerts yet. Keep tracking!</div>
+    </div>
+  </div>
+
+  <!-- Floating Hamburger -->
+  <button class="floating-hamburger" id="sidebar-toggle-btn" type="button" title="Toggle Sidebar Menu">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <div class="d-flex">
+    <!-- Left Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="logo-row">
+        <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="dash-nav-logo-img" style="width:42px;height:42px;">
+        <div class="logo-text">
+          <h3>FinSight</h3>
+          <small>Smart. Secure. Simple.</small>
+        </div>
+      </div>
+      <nav class="nav-list">
+        <a href="{{ url_for('dashboard') }}" class="nav-item"><i class="bi bi-grid"></i><span>Dashboard</span></a>
+        <a href="{{ url_for('finances') }}" class="nav-item"><i class="bi bi-wallet2"></i><span>Finances</span></a>
+        <a href="{{ url_for('add_investment') }}" class="nav-item"><i class="bi bi-graph-up-arrow"></i><span>Investments</span></a>
+        <a href="{{ url_for('goals_list') }}" class="nav-item"><i class="bi bi-flag"></i><span>Goals</span></a>
+        <a href="{{ url_for('health_score_page') }}" class="nav-item"><i class="bi bi-heart-pulse"></i><span>Health Score</span></a>
+        <a href="{{ url_for('transactions_page') }}" class="nav-item"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a>
+        <a href="{{ url_for('ai_insights') }}" class="nav-item"><i class="bi bi-robot"></i><span>AI Insights</span></a>
+        <a href="{{ url_for('report_page') }}" class="nav-item active"><i class="bi bi-file-earmark-bar-graph"></i><span>Report</span></a>
+        <a href="{{ url_for('profile_page') }}" class="nav-item"><i class="bi bi-person-circle"></i><span>Profile</span></a>
+      </nav>
+      <button class="sidebar-reset-btn" id="sidebar-reset-btn" type="button" onclick="if(confirm('Are you sure you want to reset all data to 0?')) { fetch('/api/reset-data', {method: 'POST'}).then(() => { window.location.href='/dashboard'; }); }" title="Reset all data to 0">
+        <i class="bi bi-trash"></i><span>Reset Data</span>
+      </button>
+      <a href="{{ url_for('logout') }}" class="sidebar-logout-btn" title="Logout from session">
+        <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+      </a>
+    </aside>
+
+    <!-- Main Panel -->
+    <main class="main-panel">
+      <div class="content-stack">
+
+        <!-- 1. Top Ribbon Header (Matching Dashboard / AI Insights Style) -->
+        <div class="page-hero report-hero">
+          <div class="hero-left">
+            <div class="hero-icon-wrap health-icon-wrap" style="background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important; box-shadow: 0 8px 24px rgba(99,102,241,0.45) !important;">
+              <i class="bi bi-file-earmark-bar-graph-fill text-white"></i>
+            </div>
+            <div>
+              <h1 class="hero-title text-white">Financial Report Analysis</h1>
+              <p class="hero-subtitle text-white-50">Prepared for {{ user_name }} &middot; Generated on {{ report_date }}</p>
+            </div>
+          </div>
+          <div class="download-btns ms-auto">
+            <a href="{{ url_for('report_download', fmt='word') }}" class="dl-btn dl-btn-word no-preloader">
+              <i class="bi bi-file-earmark-word-fill"></i> Word
+            </a>
+            <a href="{{ url_for('report_download', fmt='excel') }}" class="dl-btn dl-btn-excel no-preloader">
+              <i class="bi bi-file-earmark-excel-fill"></i> Excel
+            </a>
+            <a href="{{ url_for('report_download', fmt='pdf') }}" class="dl-btn dl-btn-pdf no-preloader">
+              <i class="bi bi-file-earmark-pdf-fill"></i> PDF
+            </a>
+          </div>
+        </div>
+
+        <!-- 2. Executive Summary KPI Cards Row -->
+        <div class="row g-4 mt-1">
+          <div class="col-xl-3 col-md-6">
+            <div class="rpt-kpi-card rpt-kpi-green">
+              <div class="rpt-kpi-icon"><i class="bi bi-arrow-down-circle-fill"></i></div>
+              <div class="rpt-kpi-label">Total Income</div>
+              <div class="rpt-kpi-value text-success">₹{{ total_income|inr_format }}</div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="rpt-kpi-card rpt-kpi-red">
+              <div class="rpt-kpi-icon"><i class="bi bi-arrow-up-circle-fill"></i></div>
+              <div class="rpt-kpi-label">Total Expenses</div>
+              <div class="rpt-kpi-value text-danger">₹{{ total_expenses|inr_format }}</div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="rpt-kpi-card rpt-kpi-blue">
+              <div class="rpt-kpi-icon"><i class="bi bi-graph-up-arrow"></i></div>
+              <div class="rpt-kpi-label">Total Investments</div>
+              <div class="rpt-kpi-value text-primary">₹{{ total_investments|inr_format }}</div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="rpt-kpi-card rpt-kpi-purple">
+              <div class="rpt-kpi-icon"><i class="bi bi-cash-stack"></i></div>
+              <div class="rpt-kpi-label">Net Balance</div>
+              <div class="rpt-kpi-value" style="color: #8B5CF6;">₹{{ net_balance|inr_format }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Budget Overview Card -->
+        <div class="rpt-panel mt-4" style="border-top: 4px solid #F59E0B;">
+          <div class="rpt-panel-title">
+            <i class="bi bi-pie-chart-fill me-2" style="color:#F59E0B;"></i>Budget Overview
+          </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="rpt-kpi-card rpt-kpi-orange">
+                <div class="rpt-kpi-icon"><i class="bi bi-wallet-fill"></i></div>
+                <div class="rpt-kpi-label">Budget Allocated</div>
+                <div class="rpt-kpi-value" style="color:#F59E0B;">₹{{ total_budget|inr_format }}</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="rpt-kpi-card rpt-kpi-red">
+                <div class="rpt-kpi-icon"><i class="bi bi-receipt-cutoff"></i></div>
+                <div class="rpt-kpi-label">Total Spent</div>
+                <div class="rpt-kpi-value text-danger">₹{{ total_expenses|inr_format }}</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="rpt-kpi-card rpt-kpi-green">
+                <div class="rpt-kpi-icon"><i class="bi bi-piggy-bank-fill"></i></div>
+                <div class="rpt-kpi-label">Estimated Savings</div>
+                <div class="rpt-kpi-value text-success">₹{{ savings|inr_format }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="budget-progress-box">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span style="font-weight: 600; font-size: 0.88rem;">Budget Utilization Rate</span>
+              <span style="font-weight: 800; font-size: 0.95rem; color: #F59E0B;">{{ budget_utilization }}%</span>
+            </div>
+            <div class="budget-bar-bg">
+              <div class="budget-bar-fill" style="width: {{ [budget_utilization, 100]|min }}%; background: {% if budget_utilization <= 75 %}linear-gradient(90deg, #10B981, #34D399){% elif budget_utilization <= 100 %}linear-gradient(90deg, #F59E0B, #FBBF24){% else %}linear-gradient(90deg, #EF4444, #F87171){% endif %};"></div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-2" style="font-size: 0.82rem; color: #64748B;">
+              <span>Status: <strong style="color: #0F172A;">{% if budget_utilization <= 75 %}Under Budget{% elif budget_utilization <= 100 %}Near Monthly Limit{% else %}Over Budget Limit{% endif %}</strong></span>
+              <span>Target: <strong style="color: #0F172A;">Max 100%</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Income Breakdown Table Card -->
+        <div class="rpt-panel mt-4" style="border-top: 4px solid #10B981;">
+          <div class="rpt-panel-title">
+            <i class="bi bi-arrow-down-circle-fill me-2" style="color:#10B981;"></i>Income Breakdown
+          </div>
+          {% if incomes %}
+          <div class="table-responsive">
+            <table class="table rpt-table align-middle mb-0">
+              <thead>
+                <tr><th>#</th><th>Source</th><th>Amount (₹)</th><th>Date</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                {% for item in incomes %}
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td><strong>{{ item.source }}</strong></td>
+                  <td class="amt amt-green">₹{{ item.amount|inr_format }}</td>
+                  <td>{{ item.income_date }}</td>
+                  <td>{{ item.notes or '—' }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                  <td></td>
+                  <td><strong>TOTAL INCOME</strong></td>
+                  <td class="amt amt-green"><strong>₹{{ total_income|inr_format }}</strong></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="empty-state"><i class="bi bi-inbox"></i>No income records found.</div>
+          {% endif %}
+        </div>
+
+        <!-- 5. Expense Breakdown Table Card -->
+        <div class="rpt-panel mt-4" style="border-top: 4px solid #EF4444;">
+          <div class="rpt-panel-title">
+            <i class="bi bi-arrow-up-circle-fill me-2" style="color:#EF4444;"></i>Expense Breakdown
+          </div>
+          {% if expenses %}
+          <div class="table-responsive">
+            <table class="table rpt-table align-middle mb-0">
+              <thead>
+                <tr><th>#</th><th>Category</th><th>Amount (₹)</th><th>Date</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                {% for item in expenses %}
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td><strong>{{ item.category }}</strong></td>
+                  <td class="amt amt-red">₹{{ item.amount|inr_format }}</td>
+                  <td>{{ item.expense_date }}</td>
+                  <td>{{ item.notes or '—' }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                  <td></td>
+                  <td><strong>TOTAL EXPENSES</strong></td>
+                  <td class="amt amt-red"><strong>₹{{ total_expenses|inr_format }}</strong></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="empty-state"><i class="bi bi-inbox"></i>No expense records found.</div>
+          {% endif %}
+        </div>
+
+        <!-- 6. Investment Portfolio Table Card -->
+        <div class="rpt-panel mt-4" style="border-top: 4px solid #3B82F6;">
+          <div class="rpt-panel-title">
+            <i class="bi bi-graph-up-arrow me-2" style="color:#3B82F6;"></i>Investment Portfolio
+          </div>
+          {% if investments %}
+          <div class="table-responsive">
+            <table class="table rpt-table align-middle mb-0">
+              <thead>
+                <tr><th>#</th><th>Type</th><th>Amount (₹)</th><th>Date</th><th>Notes</th></tr>
+              </thead>
+              <tbody>
+                {% for item in investments %}
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td><strong>{{ item.invest_type }}</strong></td>
+                  <td class="amt amt-blue">₹{{ item.amount|inr_format }}</td>
+                  <td>{{ item.invest_date }}</td>
+                  <td>{{ item.notes or '—' }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                  <td></td>
+                  <td><strong>TOTAL INVESTMENTS</strong></td>
+                  <td class="amt amt-blue"><strong>₹{{ total_investments|inr_format }}</strong></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="empty-state"><i class="bi bi-inbox"></i>No investment records found.</div>
+          {% endif %}
+        </div>
+
+        <!-- 7. Goals Summary Table Card -->
+        <div class="rpt-panel mt-4" style="border-top: 4px solid #8B5CF6;">
+          <div class="rpt-panel-title">
+            <i class="bi bi-flag-fill me-2" style="color:#8B5CF6;"></i>Goals Summary
+          </div>
+          {% if goals %}
+          <div class="table-responsive">
+            <table class="table rpt-table align-middle mb-0">
+              <thead>
+                <tr><th>#</th><th>Goal Name</th><th>Target (₹)</th><th>Current (₹)</th><th>Progress</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                {% for g in goals %}
+                <tr>
+                  <td>{{ loop.index }}</td>
+                  <td><strong>{{ g.goal_name }}</strong></td>
+                  <td class="amt">₹{{ g.target_amount|inr_format }}</td>
+                  <td class="amt">₹{{ g.current_amount|inr_format }}</td>
+                  <td style="min-width: 140px;">
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="goal-progress-bar-bg flex-grow-1">
+                        <div class="goal-progress-bar-fill" style="width:{{ [g.progress, 100]|min }}%;"></div>
+                      </div>
+                      <span style="font-size:0.8rem;font-weight:700;color:#8B5CF6;">{{ g.progress }}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="goal-status-badge {% if g.status == 'Active' %}badge-active{% elif g.status == 'Completed' %}badge-completed{% else %}badge-paused{% endif %}">
+                      {{ g.status }}
+                    </span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="empty-state"><i class="bi bi-flag"></i>No goals set yet.</div>
+          {% endif %}
+        </div>
+
+        <!-- 8. Financial Health Score Card -->
+        <div class="rpt-panel mt-4" style="border-top: 4px solid #6366F1;">
+          <div class="rpt-panel-title">
+            <i class="bi bi-heart-pulse-fill me-2" style="color:#6366F1;"></i>Financial Health Score
+          </div>
+          <div class="health-score-container py-2">
+            <div class="health-circle" style="--score: {{ health_score }};">
+              <div class="health-circle-inner">
+                <div class="score-num">{{ health_score }}</div>
+                <div class="score-label">out of 100</div>
+              </div>
+            </div>
+            <div class="health-summary-text">
+              {% if health_score >= 80 %}
+                <strong>Excellent!</strong> Your financial health is outstanding. You have strong savings habits, controlled expenses, and diversified investments.
+              {% elif health_score >= 60 %}
+                <strong>Good.</strong> Your finances are on a healthy track. Consider increasing your investment allocation for even better growth.
+              {% elif health_score >= 40 %}
+                <strong>Fair.</strong> There's room for improvement. Focus on reducing unnecessary expenses and setting aside more for savings.
+              {% elif health_score > 0 %}
+                <strong>Needs Attention.</strong> Your expenses may be outpacing your income. Review your budget and set clear financial goals.
+              {% else %}
+                <strong>No Data.</strong> Start tracking your income, expenses, and investments to see your financial health score here.
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align:center;padding:24px 0 12px;color:#64748B;font-size:0.78rem;border-top:1px solid #E2E8F0;margin-top:16px;">
+          <i class="bi bi-shield-lock-fill" style="color:#6366F1;margin-right:5px;"></i>
+          This report is auto-generated by <strong style="color:#6366F1;">FinSight</strong> &middot; {{ report_date }} &middot; Confidential
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/cursor.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/alerts.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

@@ -52,18 +52,99 @@
       color: var(--text-dark);
     }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
 </head>
 <body class="theme-income">
+  <!-- Full Page Preloader -->
+  <div id="page-preloader">
+    <div class="preloader-content">
+      <div class="preloader-logo-wrapper">
+        <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="preloader-logo">
+        <div class="preloader-pulse-ring"></div>
+      </div>
+      <div class="preloader-text">Loading<span class="dots">...</span></div>
+      <div class="preloader-spinner"></div>
+    </div>
+  </div>
+
 <div id="cursor-dot"></div>
 <div id="cursor-ring"></div>
 
-<!-- Profile Chip -->
-<a href="{{ url_for('profile_page') }}" class="profile-chip-global" title="View Profile">
-  <div class="profile-chip-avatar">{{ user_name[0]|upper if user_name else 'A' }}</div>
-  <div class="profile-chip-info">
-    <span class="profile-chip-name">{{ user_name if user_name else 'Arjun Mehta' }}</span>
+  <!-- Top Left Home Button -->
+<!-- Fixed Top Right Header Controls (Notification Bell, Theme Toggle, Profile Chip) -->
+<div class="top-header-bar-right">
+  <!-- 1. Notification Bell -->
+  <button class="notif-bell-btn" id="notif-bell-btn" type="button" title="Financial Alerts">
+    <i class="bi bi-bell-fill"></i>
+    <span class="notif-badge hidden" id="notif-badge">0</span>
+  </button>
+
+  <!-- 2. Dark/Light Theme Toggle -->
+  <button class="theme-toggle-btn" id="theme-toggle-btn" type="button" title="Toggle Dark/Light Mode">
+    <i class="bi bi-sun-fill" style="color: #FBBF24;"></i>
+  </button>
+
+  <!-- 3. Profile Chip (Avatar + User Name) -->
+  <!-- 3. Profile Chip (Avatar + User Name) -->
+  <a href="{{ url_for('profile_page') }}" class="profile-chip-global" title="View Profile">
+    {% if profile_pic %}
+      <img src="{{ url_for('static', filename=profile_pic) }}" alt="Profile Pic" class="profile-chip-img" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+    {% else %}
+      <div class="profile-chip-avatar">{{ user_name[0]|upper if user_name else 'U' }}</div>
+    {% endif %}
+    <div class="profile-chip-info">
+      <span class="profile-chip-name">{{ user_name if user_name else 'User' }}</span>
+    </div>
+  </a>
+</div>
+
+<!-- Financial Alerts Slide-out Panel Overlay & Drawer -->
+<div class="alert-panel-overlay" id="alert-panel-overlay"></div>
+<div class="alert-panel" id="alert-panel">
+  <div class="alert-panel-header">
+    <h3><i class="bi bi-shield-exclamation"></i> Financial Alerts</h3>
+    <button class="alert-panel-close" id="alert-panel-close" type="button"><i class="bi bi-x-lg"></i></button>
   </div>
-</a>
+  <div class="alert-panel-actions" style="display: flex; gap: 8px; justify-content: space-between; align-items: center;">
+    <span class="alert-count-badge" id="alert-count-text">0 Unread</span>
+    <div style="display: flex; gap: 6px;">
+      <button class="mark-all-read-btn" id="mark-all-read-btn" type="button" style="white-space: nowrap;">✓ Mark Read</button>
+      <button class="clear-all-btn" id="clear-all-btn" type="button" style="background:none;border:1px solid rgba(255,255,255,0.18);color:#EF4444;font-size:0.73rem;padding:4px 10px;border-radius:100px;cursor:pointer;transition:all 0.2s;white-space: nowrap;">🗑 Clear All</button>
+    </div>
+  </div>
+
+    <!-- Date Filter & All Button for Alerts/Notifications -->
+    <!-- Date Filter & All Button for Alerts/Notifications -->
+  <div class="alert-filter-section">
+    <div class="alert-filter-header">
+      <span><i class="bi bi-funnel-fill me-1"></i> Filter Messages</span>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button type="button" id="alert-filter-all-btn" class="alert-filter-btn active">
+          <i class="bi bi-collection-fill me-1"></i> All
+        </button>
+        <button type="button" id="alert-filter-reset-btn" class="alert-filter-reset" style="display:none;">
+          <i class="bi bi-arrow-counterclockwise"></i> Clear
+        </button>
+      </div>
+    </div>
+    <div class="alert-filter-inputs" style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+      <label for="alert-date-filter" style="font-size: 0.73rem; color: #94A3B8; margin: 0; font-weight: 500; white-space: nowrap;">
+        <i class="bi bi-calendar-event me-1"></i> Select Day:
+      </label>
+      <input type="date" id="alert-date-filter" class="alert-input-control" style="max-width: 170px;" />
+    </div>
+    <div id="alert-filter-info" class="alert-filter-status" style="display: none;">
+      <i class="bi bi-filter"></i> Filtering: <span id="alert-filter-status-text"></span>
+    </div>
+  </div>
+
+  <div class="alert-list" id="alert-list">
+    <div class="alert-empty"><i class="bi bi-check2-circle"></i>No alerts yet. Keep tracking!</div>
+  </div>
+</div>
+
+
+
 
   <button class="floating-hamburger" id="sidebar-toggle-btn" type="button" title="Toggle Sidebar Menu">
     <i class="bi bi-list"></i>
@@ -88,6 +169,7 @@
       <a href="{{ url_for('health_score_page') }}" class="nav-item{% if request.path == url_for('health_score_page') %} active{% endif %}"><i class="bi bi-heart-pulse"></i><span>Health Score</span></a>
       <a href="{{ url_for('transactions_page') }}" class="nav-item{% if request.path == url_for('transactions_page') %} active{% endif %}"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a>
       <a href="{{ url_for('ai_insights') }}" class="nav-item{% if request.path == url_for('ai_insights') %} active{% endif %}"><i class="bi bi-robot"></i><span>AI Insights</span></a>
+      <a href="{{ url_for('report_page') }}" class="nav-item{% if request.path == url_for('report_page') %} active{% endif %}"><i class="bi bi-file-earmark-bar-graph"></i><span>Report</span></a>
       <a href="{{ url_for('profile_page') }}" class="nav-item{% if request.path == url_for('profile_page') %} active{% endif %}"><i class="bi bi-person-circle"></i><span>Profile</span></a>
     </nav>
     <button class="sidebar-reset-btn" id="sidebar-reset-btn" type="button" onclick="if(confirm('Are you sure you want to reset all data to 0?')) { fetch('/api/reset-data', {method: 'POST'}).then(() => { window.location.href='/dashboard'; }); }" title="Reset all data to 0">
@@ -227,5 +309,7 @@
       });
   });
 </script>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/alerts.js') }}"></script>
 </body>
 </html>

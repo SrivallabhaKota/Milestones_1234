@@ -1,3 +1,40 @@
+/* ── Master Page Hero Ribbon (Unified Dashboard Gradient Across All Pages) ── */
+.page-hero,
+.smart-dash-hero,
+.income-hero,
+.expense-hero,
+.budget-hero,
+.invest-hero,
+.goals-hero,
+.goal-planning-hero,
+.profile-hero,
+.dash-hero,
+.health-hero,
+.report-hero,
+.ai-insights-hero,
+.finances-hero {
+  background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 55%, #312E81 100%) !important;
+  border-radius: 20px !important;
+  padding: 26px 32px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.35) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.page-hero::before,
+.smart-dash-hero::before {
+  content: '' !important;
+  position: absolute !important;
+  width: 400px !important;
+  height: 400px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, transparent 70%) !important;
+  top: -150px !important;
+  right: -80px !important;
+  pointer-events: none !important;
+}
+
 /* ============================================================
    pages.css — Shared styles for Income, Expense, Budget, Investment pages
    All pages use the dashboard sidebar + topbar layout.
@@ -103,18 +140,74 @@ box-shadow: 0 10px 20px rgba(71, 85, 105, 0.15);
   z-index: 1;
 }
 
+/* Enhanced Colorful Hero Icon Wraps */
 .hero-icon-wrap {
-  width: 56px; height: 56px;
-  border-radius: 16px;
+  width: 58px; height: 58px;
+  border-radius: 18px;
   display: grid; place-items: center;
-  font-size: 1.5rem;
+  font-size: 1.65rem;
   flex-shrink: 0;
+  transition: all 0.3s ease;
 }
-.income-icon-wrap  { background: rgba(16,185,129,0.25); color: #6EE7B7; }
-.expense-icon-wrap { background: rgba(249,115,22,0.25); color: #FDBA74; }
-.budget-icon-wrap  { background: rgba(139,92,246,0.25); color: #C4B5FD; }
-.invest-icon-wrap  { background: rgba(99,102,241,0.25); color: #A5B4FC; }
-.dash-icon-wrap    { background: rgba(255,255,255,0.15); color: #F1F5F9; }
+
+.income-icon-wrap  {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.expense-icon-wrap {
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.budget-icon-wrap  {
+  background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.invest-icon-wrap  {
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.dash-icon-wrap    {
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.2) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.health-icon-wrap {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45), inset 0 0 12px rgba(255, 255, 255, 0.25) !important;
+  border: 2px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+.health-icon-wrap i {
+  font-size: 1.75rem !important;
+  color: #FFFFFF !important;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25)) !important;
+  animation: heartPulseIcon 2s infinite ease-in-out !important;
+}
+
+@keyframes heartPulseIcon {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
 
 
 .hero-title {

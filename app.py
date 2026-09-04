@@ -444,6 +444,32 @@ def get_db_connection():
         **ssl_config
     )
 
+@app.context_processor
+def inject_global_user_vars():
+    user_id = session.get('user_id')
+    user_name = session.get('user_name', 'User')
+    user_email = session.get('user_email', '')
+    profile_pic = session.get('profile_pic')
+
+    if user_id and profile_pic is None:
+        try:
+            conn = get_db_connection()
+            with conn.cursor() as cur:
+                cur.execute("SELECT profile_pic FROM user_profile WHERE user_id = %s", (user_id,))
+                prof = cur.fetchone()
+                if prof and prof.get('profile_pic'):
+                    profile_pic = prof['profile_pic']
+                    session['profile_pic'] = profile_pic
+            conn.close()
+        except Exception:
+            pass
+
+    return dict(
+        user_name=user_name,
+        user_email=user_email,
+        profile_pic=profile_pic
+    )
+
 
 # Checks if user is logged in
 
@@ -939,9 +965,9 @@ def api_recent_transactions():
 
         conn.close()
 
-        transactions = incomes + expenses + investments
+        transactions = list(incomes) + list(expenses) + list(investments)
 
-        transactions.sort(key=lambda x: x['created_at'], reverse=True)
+        transactions.sort(key=lambda x: str(x.get('created_at') or x.get('date') or ''), reverse=True)
 
         recent = transactions[:8]
 
@@ -2582,6 +2608,9 @@ def profile_page():
                         VALUES (%s,%s,%s,%s,%s,%s,%s)''',
                         (user_id, phone, currency, saving_cap, invest_cap, notes, profile_pic_path))
 
+                    if profile_pic_path:
+                        session['profile_pic'] = profile_pic_path
+
             conn.close()
             flash('Profile updated successfully! ✅', 'success')
             return redirect(url_for('profile_page'))
@@ -3054,9 +3083,13 @@ def api_generate_alerts():
 
 def api_get_alerts():
 
-    """Get all alerts for current user (newest first)."""
+    """Get alerts for current user with optional date or month filtering (newest first)."""
 
     user_id = session.get('user_id')
+
+    filter_date = request.args.get('date')   # YYYY-MM-DD
+
+    filter_month = request.args.get('month') # YYYY-MM
 
     try:
 
@@ -3064,13 +3097,37 @@ def api_get_alerts():
 
         with conn.cursor() as cur:
 
-            cur.execute(
+            if filter_date:
 
-                "SELECT id, alert_type, title, message, is_read, severity, trigger_ref, created_at FROM alerts WHERE user_id=%s ORDER BY created_at DESC LIMIT 30",
+                cur.execute(
 
-                (user_id,)
+                    "SELECT id, alert_type, title, message, is_read, severity, trigger_ref, created_at FROM alerts WHERE user_id=%s AND DATE(created_at)=%s ORDER BY created_at DESC",
 
-            )
+                    (user_id, filter_date)
+
+                )
+
+            elif filter_month and '-' in filter_month:
+
+                parts = filter_month.split('-')
+
+                cur.execute(
+
+                    "SELECT id, alert_type, title, message, is_read, severity, trigger_ref, created_at FROM alerts WHERE user_id=%s AND YEAR(created_at)=%s AND MONTH(created_at)=%s ORDER BY created_at DESC",
+
+                    (user_id, parts[0], parts[1])
+
+                )
+
+            else:
+
+                cur.execute(
+
+                    "SELECT id, alert_type, title, message, is_read, severity, trigger_ref, created_at FROM alerts WHERE user_id=%s ORDER BY created_at DESC LIMIT 50",
+
+                    (user_id,)
+
+                )
 
             rows = cur.fetchall()
 
@@ -3170,11 +3227,8 @@ def api_clear_alerts():
 
         return jsonify({'error': str(e)}), 500
 
-@app.route('/health-score')
-@login_required
-def health_score_page():
-    user_id = session.get('user_id')
-    user_name = session.get('user_name', 'User')
+
+def calculate_financial_health_score(user_id):
     today = datetime.now().date()
     cur_month = today.month
     cur_year = today.year
@@ -3182,6 +3236,24 @@ def health_score_page():
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
+            # 0. Check if user has added any financial data at all
+            cur.execute("SELECT COUNT(*) AS cnt FROM income WHERE user_id = %s", (user_id,))
+            has_income = cur.fetchone()['cnt'] > 0
+
+            cur.execute("SELECT COUNT(*) AS cnt FROM expenses WHERE user_id = %s", (user_id,))
+            has_expenses = cur.fetchone()['cnt'] > 0
+
+            cur.execute("SELECT COUNT(*) AS cnt FROM investments WHERE user_id = %s", (user_id,))
+            has_investments = cur.fetchone()['cnt'] > 0
+
+            cur.execute("SELECT COUNT(*) AS cnt FROM budget WHERE user_id = %s", (user_id,))
+            has_budget = cur.fetchone()['cnt'] > 0
+
+            cur.execute("SELECT COUNT(*) AS cnt FROM goals WHERE user_id = %s", (user_id,))
+            has_goals = cur.fetchone()['cnt'] > 0
+
+            has_any_data = (has_income or has_expenses or has_investments or has_budget or has_goals)
+
             # 1. Income this month
             cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM income WHERE user_id = %s AND MONTH(income_date) = %s AND YEAR(income_date) = %s", (user_id, cur_month, cur_year))
             monthly_income = float(cur.fetchone()['total'])
@@ -3226,111 +3298,145 @@ def health_score_page():
 
         conn.close()
 
-        # ── 1. Budget Management (30 points) ──
-        if budgets:
-            not_exceeded = 0
-            for b in budgets:
-                if float(b['spent']) <= float(b['limit_amount']):
-                    not_exceeded += 1
-            budget_score = round(30 * (not_exceeded / len(budgets)))
-        else:
-            if monthly_expenses <= monthly_income and monthly_income > 0:
-                budget_score = 25
-            else:
-                budget_score = 15
-
-        # ── 2. Savings Rate (25 points) ──
-        savings = monthly_income - monthly_expenses
-        savings_rate = (savings / monthly_income * 100) if monthly_income > 0 else 0
-        if savings_rate >= 30:
-            savings_score = 25
-        elif savings_rate > 0:
-            savings_score = round(25 * (savings_rate / 30))
-        else:
+        if not has_any_data:
+            budget_score = 0
             savings_score = 0
-
-        # ── 3. Goal Progress (20 points) ──
-        if goals:
-            goal_points = 0
-            for g in goals:
-                g_target = float(g['target_amount'])
-                g_saved = float(g['current_amount'])
-                g_status = g['status']
-                g_date = g['target_date']
-                
-                if g_status == 'Completed':
-                    goal_points += 1.0
-                else:
-                    deadline_missed = False
-                    if g_date:
-                        td = g_date if isinstance(g_date, type(today)) else _parse_date(str(g_date))
-                        if td and td < today:
-                            deadline_missed = True
-                    
-                    if deadline_missed:
-                        goal_points += max(0.0, (g_saved / g_target) * 0.5)
-                    else:
-                        goal_points += (g_saved / g_target) if g_target > 0 else 1.0
-            goal_score = round(20 * (goal_points / len(goals)))
+            goal_score = 0
+            spending_score = 0
+            investment_score = 0
+            total_score = 0
+            status = "No Data"
+            status_color = "#94A3B8"
+            description = "No financial data found yet. Start by adding your income, expenses, budget, or goals to generate your health score!"
         else:
-            goal_score = 10
-
-        # ── 4. Spending Pattern (15 points) ──
-        if last_month_same_period > 0:
-            if monthly_expenses <= last_month_same_period:
-                spending_score = 15
+            # ── 1. Budget Management (30 points) ──
+            if budgets:
+                not_exceeded = sum(1 for b in budgets if float(b['spent']) <= float(b['limit_amount']))
+                budget_score = round(30 * (not_exceeded / len(budgets)))
+            elif has_budget or has_income or has_expenses:
+                if monthly_expenses <= monthly_income and monthly_income > 0:
+                    budget_score = 25
+                else:
+                    budget_score = 15 if monthly_income > 0 else 0
             else:
-                increase_pct = ((monthly_expenses - last_month_same_period) / last_month_same_period) * 100
-                if increase_pct <= 20:
-                    spending_score = round(15 * (1 - (increase_pct / 100)))
+                budget_score = 0
+
+            # ── 2. Savings Rate (25 points) ──
+            savings = monthly_income - monthly_expenses
+            savings_rate = (savings / monthly_income * 100) if monthly_income > 0 else 0
+            if savings_rate >= 30:
+                savings_score = 25
+            elif savings_rate > 0:
+                savings_score = round(25 * (savings_rate / 30))
+            else:
+                savings_score = 0
+
+            # ── 3. Goal Progress (20 points) ──
+            if goals:
+                goal_points = 0
+                for g in goals:
+                    g_target = float(g['target_amount'])
+                    g_saved = float(g['current_amount'])
+                    g_status = g['status']
+                    g_date = g['target_date']
+                    
+                    if g_status == 'Completed':
+                        goal_points += 1.0
+                    else:
+                        deadline_missed = False
+                        if g_date:
+                            td = g_date if isinstance(g_date, type(today)) else _parse_date(str(g_date))
+                            if td and td < today:
+                                deadline_missed = True
+                        
+                        if deadline_missed:
+                            goal_points += max(0.0, (g_saved / g_target) * 0.5) if g_target > 0 else 0.0
+                        else:
+                            goal_points += (g_saved / g_target) if g_target > 0 else 1.0
+                goal_score = round(20 * (goal_points / len(goals)))
+            else:
+                goal_score = 0
+
+            # ── 4. Spending Pattern (15 points) ──
+            if last_month_same_period > 0:
+                if monthly_expenses <= last_month_same_period:
+                    spending_score = 15
                 else:
-                    spending_score = 5
-        else:
-            spending_score = 15 if monthly_expenses == 0 else 12
+                    increase_pct = ((monthly_expenses - last_month_same_period) / last_month_same_period) * 100
+                    if increase_pct <= 20:
+                        spending_score = round(15 * (1 - (increase_pct / 100)))
+                    else:
+                        spending_score = 5
+            elif has_expenses:
+                spending_score = 15 if monthly_expenses == 0 else 12
+            else:
+                spending_score = 0
 
-        # ── 5. Investment Habit (10 points) ──
-        if investment_capacity > 0:
-            investment_score = round(10 * min(1.0, monthly_investments / investment_capacity))
-        else:
-            investment_score = 10 if monthly_investments > 0 else 5
+            # ── 5. Investment Habit (10 points) ──
+            if investment_capacity > 0:
+                investment_score = round(10 * min(1.0, monthly_investments / investment_capacity))
+            elif has_investments:
+                investment_score = 10 if monthly_investments > 0 else 5
+            else:
+                investment_score = 0
 
-        # ── Total Score ──
-        total_score = budget_score + savings_score + goal_score + spending_score + investment_score
-        total_score = max(0, min(100, total_score))
+            # ── Total Score ──
+            total_score = budget_score + savings_score + goal_score + spending_score + investment_score
+            total_score = max(0, min(100, total_score))
 
-        if total_score >= 90:
-            status = "Excellent"
-            status_color = "#10B981"
-            description = "Incredible job! You are managing your finances masterfully. Keep it up!"
-        elif total_score >= 75:
-            status = "Good"
-            status_color = "#10B981"
-            description = "You are managing your finances well. Keep it up and try to increase your savings."
-        elif total_score >= 50:
-            status = "Fair"
-            status_color = "#F59E0B"
-            description = "Your financial health is stable, but there is room for improvement. Try to cut back on dining out or shopping."
-        else:
-            status = "Needs Action"
-            status_color = "#EF4444"
-            description = "Your financial health needs attention. You are spending more than you save or missing your goal deadlines. Let's fix this!"
+            if total_score >= 90:
+                status = "Excellent"
+                status_color = "#10B981"
+                description = "Incredible job! You are managing your finances masterfully. Keep it up!"
+            elif total_score >= 75:
+                status = "Good"
+                status_color = "#10B981"
+                description = "You are managing your finances well. Keep it up and try to increase your savings."
+            elif total_score >= 50:
+                status = "Fair"
+                status_color = "#F59E0B"
+                description = "Your financial health is stable, but there is room for improvement. Try to cut back on dining out or shopping."
+            else:
+                status = "Needs Action"
+                status_color = "#EF4444"
+                description = "Your financial health needs attention. You are spending more than you save or missing your goal deadlines. Let's fix this!"
 
-        return render_template('health_score.html',
-                               user_name=user_name,
-                               total_score=total_score,
-                               status=status,
-                               status_color=status_color,
-                               description=description,
-                               breakdown={
-                                   'budget': budget_score,
-                                   'savings': savings_score,
-                                   'goals': goal_score,
-                                   'spending': spending_score,
-                                   'investments': investment_score
-                               })
-
+        return {
+            'total_score': total_score,
+            'status': status,
+            'status_color': status_color,
+            'description': description,
+            'breakdown': {
+                'budget': budget_score,
+                'savings': savings_score,
+                'goals': goal_score,
+                'spending': spending_score,
+                'investments': investment_score
+            }
+        }
     except Exception as e:
-        return f"Error loading Financial Health Score: {str(e)}"
+        print(f"Error calculating health score: {e}")
+        return {
+            'total_score': 0,
+            'status': "Error",
+            'status_color': "#EF4444",
+            'description': f"Error calculating health score: {str(e)}",
+            'breakdown': {'budget': 0, 'savings': 0, 'goals': 0, 'spending': 0, 'investments': 0}
+        }
+
+@app.route('/health-score')
+@login_required
+def health_score_page():
+    user_id = session.get('user_id')
+    user_name = session.get('user_name', 'User')
+    res = calculate_financial_health_score(user_id)
+    return render_template('health_score.html',
+                           user_name=user_name,
+                           total_score=res['total_score'],
+                           status=res['status'],
+                           status_color=res['status_color'],
+                           description=res['description'],
+                           breakdown=res['breakdown'])
 
 @app.route('/transactions')
 @login_required
@@ -3351,13 +3457,13 @@ def transactions_page():
             investments = cur.fetchall()
         conn.close()
 
-        transactions = incomes + expenses + investments
+        transactions = list(incomes) + list(expenses) + list(investments)
         for t in transactions:
             t['amount'] = float(t['amount'])
             t['date'] = str(t['date'])
 
         # Sort by date descending
-        transactions.sort(key=lambda x: x['date'], reverse=True)
+        transactions.sort(key=lambda x: (str(x.get('date', '')), str(x.get('created_at', ''))), reverse=True)
 
         return render_template('transactions.html',
                                user_name=user_name,
@@ -3998,7 +4104,345 @@ def api_active_goals_list():
 
         return jsonify({'error': str(e)}), 500
 
+# ==========================================
+# Financial Report Module
+# ==========================================
+
+def get_report_data(user_id):
+    """Gather all financial data for report generation."""
+    data = {
+        'incomes': [], 'expenses': [], 'investments': [], 'budgets': [], 'goals': [],
+        'total_income': 0, 'total_expenses': 0, 'total_investments': 0,
+        'total_budget': 0, 'net_balance': 0, 'health_score': 0,
+        'savings': 0, 'budget_utilization': 0
+    }
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute('SELECT * FROM income WHERE user_id = %s ORDER BY income_date DESC', (user_id,))
+            data['incomes'] = cur.fetchall()
+            cur.execute('SELECT COALESCE(SUM(amount), 0) AS total FROM income WHERE user_id = %s', (user_id,))
+            data['total_income'] = float(cur.fetchone()['total'])
+            cur.execute('SELECT * FROM expenses WHERE user_id = %s ORDER BY expense_date DESC', (user_id,))
+            data['expenses'] = cur.fetchall()
+            cur.execute('SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE user_id = %s', (user_id,))
+            data['total_expenses'] = float(cur.fetchone()['total'])
+            cur.execute('SELECT * FROM investments WHERE user_id = %s ORDER BY invest_date DESC', (user_id,))
+            data['investments'] = cur.fetchall()
+            cur.execute('SELECT COALESCE(SUM(amount), 0) AS total FROM investments WHERE user_id = %s', (user_id,))
+            data['total_investments'] = float(cur.fetchone()['total'])
+            cur.execute('SELECT * FROM budget WHERE user_id = %s ORDER BY id DESC', (user_id,))
+            data['budgets'] = cur.fetchall()
+            cur.execute('SELECT COALESCE(SUM(limit_amount), 0) AS total FROM budget WHERE user_id = %s', (user_id,))
+            data['total_budget'] = float(cur.fetchone()['total'])
+            cur.execute('SELECT * FROM goals WHERE user_id = %s ORDER BY updated_at DESC', (user_id,))
+            raw_goals = cur.fetchall()
+            for g in raw_goals:
+                target = float(g.get('target_amount', 0) or 0)
+                current = float(g.get('current_amount', 0) or 0)
+                g['progress'] = round((current / target * 100) if target > 0 else 0, 1)
+            data['goals'] = raw_goals
+        conn.close()
+        data['net_balance'] = data['total_income'] - data['total_expenses'] - data['total_investments']
+        data['savings'] = min(data['total_income'] * 0.25, max(0, data['total_income'] - data['total_expenses'] - data['total_investments']))
+        if data['total_budget'] > 0:
+            data['budget_utilization'] = round(data['total_expenses'] / data['total_budget'] * 100, 1)
+        # Use exact real-time health score calculation
+        health_res = calculate_financial_health_score(user_id)
+        data['health_score'] = health_res['total_score']
+    except Exception as e:
+        print(f"Error gathering report data: {e}")
+    return data
+
+
+@app.route('/report')
+@login_required
+def report_page():
+    user_id = session.get('user_id')
+    user_name = session.get('user_name', 'User')
+    report_data = get_report_data(user_id)
+    report_date = datetime.now().strftime('%B %d, %Y')
+    return render_template('report.html',
+        user_name=user_name, report_date=report_date,
+        total_income=report_data['total_income'], total_expenses=report_data['total_expenses'],
+        total_investments=report_data['total_investments'], total_budget=report_data['total_budget'],
+        net_balance=report_data['net_balance'], savings=report_data['savings'],
+        budget_utilization=report_data['budget_utilization'], health_score=report_data['health_score'],
+        incomes=report_data['incomes'], expenses=report_data['expenses'],
+        investments=report_data['investments'], budgets=report_data['budgets'], goals=report_data['goals']
+    )
+
+
+def _inr_fmt(val):
+    try:
+        v = abs(int(float(val)))
+        s = str(v)
+        if len(s) <= 3: return ('-' if float(val) < 0 else '') + s
+        res = s[-3:]
+        s = s[:-3]
+        while len(s) > 2:
+            res = s[-2:] + ',' + res
+            s = s[:-2]
+        if s: res = s + ',' + res
+        return ('-' if float(val) < 0 else '') + res
+    except:
+        return str(val)
+
+
+@app.route('/report/download/<fmt>')
+@login_required
+def report_download(fmt):
+    from flask import send_file
+    import io
+    user_id = session.get('user_id')
+    user_name = session.get('user_name', 'User')
+    rd = get_report_data(user_id)
+    report_date = datetime.now().strftime('%B %d, %Y')
+    inr = _inr_fmt
+
+    if fmt == 'word':
+        from docx import Document
+        from docx.shared import Pt, Cm, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+        from docx.oxml import parse_xml
+        from docx.oxml.ns import nsdecls
+
+        doc = Document()
+        style = doc.styles['Normal']
+        style.font.name = 'Calibri'
+        style.font.size = Pt(11)
+        style.font.color.rgb = RGBColor(0x1E, 0x29, 0x3B)
+
+        for sec in doc.sections:
+            sec.top_margin = Cm(2); sec.bottom_margin = Cm(2)
+            sec.left_margin = Cm(2.5); sec.right_margin = Cm(2.5)
+            # Add Double Line Page Border
+            pg_borders = parse_xml(
+                f'<w:pgBorders {nsdecls("w")} w:offsetFrom="page">'
+                f'<w:top w:val="double" w:sz="12" w:space="24" w:color="6366F1"/>'
+                f'<w:left w:val="double" w:sz="12" w:space="24" w:color="6366F1"/>'
+                f'<w:bottom w:val="double" w:sz="12" w:space="24" w:color="6366F1"/>'
+                f'<w:right w:val="double" w:sz="12" w:space="24" w:color="6366F1"/>'
+                f'</w:pgBorders>'
+            )
+            sec._sectPr.append(pg_borders)
+
+        t = doc.add_heading('', 0)
+        r = t.add_run('FINSIGHT'); r.font.size = Pt(28); r.font.color.rgb = RGBColor(0x63, 0x66, 0xF1); r.font.bold = True
+        t.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        st = doc.add_heading('', 1)
+        r = st.add_run('Financial Report Analysis'); r.font.size = Pt(18); r.font.color.rgb = RGBColor(0x33, 0x41, 0x55)
+        st.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        m = doc.add_paragraph(); m.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = m.add_run(f'Prepared for: {user_name}  |  Generated on: {report_date}')
+        r.font.size = Pt(10); r.font.color.rgb = RGBColor(0x64, 0x74, 0x8B)
+        doc.add_paragraph('\u2500' * 70)
+        doc.add_heading('Executive Summary', 2)
+        tbl = doc.add_table(rows=2, cols=4); tbl.style = 'Light Grid Accent 1'; tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+        for i, h in enumerate(['Total Income', 'Total Expenses', 'Total Investments', 'Net Balance']):
+            c = tbl.rows[0].cells[i]; c.text = h
+            for p in c.paragraphs:
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                for rr in p.runs: rr.font.bold = True; rr.font.size = Pt(10)
+        for i, v in enumerate([rd['total_income'], rd['total_expenses'], rd['total_investments'], rd['net_balance']]):
+            c = tbl.rows[1].cells[i]; c.text = f'\u20b9{inr(v)}'
+            for p in c.paragraphs:
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                for rr in p.runs: rr.font.size = Pt(12); rr.font.bold = True
+        doc.add_paragraph('')
+        doc.add_heading('Budget Overview', 2)
+        p = doc.add_paragraph(); p.add_run('Total Budget: ').font.bold = True; p.add_run(f'\u20b9{inr(rd["total_budget"])}')
+        p = doc.add_paragraph(); p.add_run('Budget Utilization: ').font.bold = True; p.add_run(f'{rd["budget_utilization"]}%')
+        p = doc.add_paragraph(); p.add_run('Savings: ').font.bold = True; p.add_run(f'\u20b9{inr(rd["savings"])}')
+        doc.add_paragraph('')
+        for section_name, items, cols, total_key in [
+            ('Income Breakdown', rd['incomes'], ['source', 'amount', 'income_date', 'notes'], 'total_income'),
+            ('Expense Breakdown', rd['expenses'], ['category', 'amount', 'expense_date', 'notes'], 'total_expenses'),
+            ('Investment Portfolio', rd['investments'], ['invest_type', 'amount', 'invest_date', 'notes'], 'total_investments'),
+        ]:
+            doc.add_heading(section_name, 2)
+            if items:
+                headers = ['#', cols[0].replace('_', ' ').title(), 'Amount (\u20b9)', 'Date', 'Notes']
+                tb = doc.add_table(rows=1, cols=5); tb.style = 'Light Grid Accent 1'
+                for i, h in enumerate(headers):
+                    tb.rows[0].cells[i].text = h
+                    for p in tb.rows[0].cells[i].paragraphs:
+                        for rr in p.runs: rr.font.bold = True; rr.font.size = Pt(9)
+                for idx, item in enumerate(items, 1):
+                    row = tb.add_row()
+                    row.cells[0].text = str(idx)
+                    row.cells[1].text = str(item.get(cols[0], ''))
+                    row.cells[2].text = f'\u20b9{inr(item.get("amount", 0))}'
+                    row.cells[3].text = str(item.get(cols[2], ''))
+                    row.cells[4].text = str(item.get('notes', '') or '—')
+                tr = tb.add_row(); tr.cells[1].text = 'TOTAL'; tr.cells[2].text = f'\u20b9{inr(rd[total_key])}'
+                for c in tr.cells:
+                    for p in c.paragraphs:
+                        for rr in p.runs: rr.font.bold = True
+            else:
+                doc.add_paragraph(f'No {section_name.lower().split()[0]} records found.')
+            doc.add_paragraph('')
+        doc.add_heading('Goals Summary', 2)
+        if rd['goals']:
+            tb = doc.add_table(rows=1, cols=6); tb.style = 'Light Grid Accent 1'
+            for i, h in enumerate(['#', 'Goal Name', 'Target (\u20b9)', 'Current (\u20b9)', 'Progress', 'Status']):
+                tb.rows[0].cells[i].text = h
+                for p in tb.rows[0].cells[i].paragraphs:
+                    for rr in p.runs: rr.font.bold = True; rr.font.size = Pt(9)
+            for idx, g in enumerate(rd['goals'], 1):
+                row = tb.add_row()
+                row.cells[0].text = str(idx); row.cells[1].text = str(g.get('goal_name', ''))
+                row.cells[2].text = f'\u20b9{inr(g.get("target_amount", 0))}'; row.cells[3].text = f'\u20b9{inr(g.get("current_amount", 0))}'
+                row.cells[4].text = f'{g.get("progress", 0)}%'; row.cells[5].text = str(g.get('status', 'Active'))
+        else:
+            doc.add_paragraph('No goals set.')
+        doc.add_paragraph('')
+        doc.add_heading('Financial Health Score', 2)
+        p = doc.add_paragraph(); r = p.add_run(f'{rd["health_score"]} / 100')
+        r.font.size = Pt(24); r.font.bold = True; r.font.color.rgb = RGBColor(0x63, 0x66, 0xF1)
+        doc.add_paragraph('\u2500' * 70)
+        f = doc.add_paragraph(); f.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = f.add_run(f'Auto-generated by FinSight \u2022 {report_date} \u2022 Confidential')
+        r.font.size = Pt(8); r.font.color.rgb = RGBColor(0x94, 0xA3, 0xB8)
+        buf = io.BytesIO(); doc.save(buf); buf.seek(0)
+        return send_file(buf, as_attachment=True, download_name=f'FinSight_Report_{datetime.now().strftime("%Y%m%d")}.docx',
+                         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+
+
+    elif fmt == 'excel':
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        wb = Workbook()
+        hf = Font(name='Calibri', bold=True, size=10, color='FFFFFF')
+        tf = Font(name='Calibri', bold=True, size=16, color='6366F1')
+        sf = Font(name='Calibri', size=11, color='64748B')
+        bf = Font(name='Calibri', bold=True, size=11, color='1E293B')
+        bfill = PatternFill(start_color='F1F5F9', end_color='F1F5F9', fill_type='solid')
+        tb = Border(left=Side(style='thin', color='E2E8F0'), right=Side(style='thin', color='E2E8F0'),
+                    top=Side(style='thin', color='E2E8F0'), bottom=Side(style='thin', color='E2E8F0'))
+        ca = Alignment(horizontal='center', vertical='center')
+        ws = wb.active; ws.title = 'Summary'; ws.sheet_properties.tabColor = '6366F1'
+        for c in ['A','B','C','D']: ws.column_dimensions[c].width = 25
+        ws.merge_cells('A1:D1'); ws['A1'].value = 'FINSIGHT - Financial Report'; ws['A1'].font = tf; ws['A1'].alignment = ca
+        ws.merge_cells('A2:D2'); ws['A2'].value = f'Prepared for: {user_name}  |  Generated: {report_date}'; ws['A2'].font = sf; ws['A2'].alignment = ca
+        rn = 4
+        for label, val in [('Total Income', f'\u20b9{inr(rd["total_income"])}'), ('Total Expenses', f'\u20b9{inr(rd["total_expenses"])}'),
+                           ('Total Investments', f'\u20b9{inr(rd["total_investments"])}'), ('Total Budget', f'\u20b9{inr(rd["total_budget"])}'),
+                           ('Net Balance', f'\u20b9{inr(rd["net_balance"])}'), ('Savings', f'\u20b9{inr(rd["savings"])}'),
+                           ('Budget Utilization', f'{rd["budget_utilization"]}%'), ('Health Score', f'{rd["health_score"]} / 100')]:
+            ws.append([label, val])
+            ws[f'A{rn}'].font = bf; ws[f'A{rn}'].border = tb; ws[f'B{rn}'].border = tb
+            ws[f'B{rn}'].alignment = Alignment(horizontal='right'); rn += 1
+        for sheet_name, items, headers, color, cols in [
+            ('Income', rd['incomes'], ['#','Source','Amount','Date','Notes'], '10B981', ['source','amount','income_date','notes']),
+            ('Expenses', rd['expenses'], ['#','Category','Amount','Date','Notes'], 'EF4444', ['category','amount','expense_date','notes']),
+            ('Investments', rd['investments'], ['#','Type','Amount','Date','Notes'], '3B82F6', ['invest_type','amount','invest_date','notes']),
+        ]:
+            wss = wb.create_sheet(sheet_name); wss.sheet_properties.tabColor = color
+            for i, w in enumerate([6, 25, 20, 18, 30]): wss.column_dimensions[chr(65+i)].width = w
+            wss.append(headers)
+            for i in range(1, len(headers)+1):
+                c = wss.cell(row=1, column=i); c.font = hf
+                c.fill = PatternFill(start_color=color, end_color=color, fill_type='solid'); c.alignment = ca; c.border = tb
+            for idx, item in enumerate(items, 1):
+                wss.append([idx, item.get(cols[0], ''), float(item.get('amount', 0)), str(item.get(cols[2], '')), item.get(cols[3], '') or ''])
+                for c in range(1, len(headers)+1): wss.cell(row=idx+1, column=c).border = tb
+            tr = len(items) + 2
+            wss.cell(row=tr, column=2, value='TOTAL').font = bf; wss.cell(row=tr, column=2).fill = bfill
+            wss.cell(row=tr, column=3, value=sum(float(it.get('amount', 0)) for it in items)).font = bf; wss.cell(row=tr, column=3).fill = bfill
+            for c in range(1, len(headers)+1): wss.cell(row=tr, column=c).border = tb
+        wsg = wb.create_sheet('Goals'); wsg.sheet_properties.tabColor = '8B5CF6'
+        for i, w in enumerate([6, 28, 18, 18, 14, 14]): wsg.column_dimensions[chr(65+i)].width = w
+        gh = ['#', 'Goal', 'Target', 'Current', 'Progress', 'Status']
+        wsg.append(gh)
+        for i in range(1, 7):
+            c = wsg.cell(row=1, column=i); c.font = hf
+            c.fill = PatternFill(start_color='8B5CF6', end_color='8B5CF6', fill_type='solid'); c.alignment = ca; c.border = tb
+        for idx, g in enumerate(rd['goals'], 1):
+            wsg.append([idx, g.get('goal_name',''), float(g.get('target_amount',0) or 0), float(g.get('current_amount',0) or 0), f'{g.get("progress",0)}%', g.get('status','')])
+            for c in range(1, 7): wsg.cell(row=idx+1, column=c).border = tb
+        buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+        return send_file(buf, as_attachment=True, download_name=f'FinSight_Report_{datetime.now().strftime("%Y%m%d")}.xlsx',
+                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    elif fmt == 'pdf':
+        from fpdf import FPDF
+
+        def _clean_s(s):
+            if not s: return ''
+            st = str(s).replace('₹', 'Rs. ').replace('—', '-').replace('–', '-').replace('’', "'")
+            return st.encode('latin-1', 'replace').decode('latin-1')
+
+        class RPdf(FPDF):
+            def header(self):
+                self.set_font('Helvetica', 'B', 20); self.set_text_color(99, 102, 241)
+                self.cell(0, 12, 'FINSIGHT', align='C', new_x='LMARGIN', new_y='NEXT')
+                self.set_font('Helvetica', '', 12); self.set_text_color(100, 116, 139)
+                self.cell(0, 8, 'Financial Report Analysis', align='C', new_x='LMARGIN', new_y='NEXT')
+                self.set_font('Helvetica', '', 9)
+                self.cell(0, 6, _clean_s(f'Prepared for: {user_name}  |  Generated: {report_date}'), align='C', new_x='LMARGIN', new_y='NEXT')
+                self.set_draw_color(226, 232, 240); self.line(20, self.get_y()+3, 190, self.get_y()+3); self.ln(8)
+            def footer(self):
+                self.set_y(-15); self.set_font('Helvetica', 'I', 7); self.set_text_color(148, 163, 184)
+                self.cell(0, 10, _clean_s(f'FinSight Report - {report_date} - Page {self.page_no()}/{{nb}}'), align='C')
+            def stitle(self, title):
+                self.set_font('Helvetica', 'B', 14); self.set_text_color(30, 41, 59)
+                self.cell(0, 10, _clean_s(title), new_x='LMARGIN', new_y='NEXT')
+                self.set_draw_color(99, 102, 241); self.set_line_width(0.6)
+                self.line(self.l_margin, self.get_y(), self.l_margin+40, self.get_y()); self.set_line_width(0.2); self.ln(4)
+            def add_tbl(self, headers, data, widths, hc=(99,102,241)):
+                self.set_fill_color(*hc); self.set_text_color(255,255,255); self.set_font('Helvetica','B',9)
+                for i, h in enumerate(headers): self.cell(widths[i], 8, _clean_s(h), border=1, fill=True, align='C')
+                self.ln(); self.set_text_color(30,41,59); self.set_font('Helvetica','',9)
+                fill = False
+                for row in data:
+                    if fill: self.set_fill_color(248,250,252)
+                    else: self.set_fill_color(255,255,255)
+                    for i, val in enumerate(row): self.cell(widths[i], 7, _clean_s(val), border=1, fill=True, align='C' if i==0 else 'L')
+                    self.ln(); fill = not fill
+
+        pdf = RPdf('P','mm','A4'); pdf.alias_nb_pages(); pdf.set_auto_page_break(auto=True, margin=20); pdf.add_page()
+        pdf.stitle('Executive Summary')
+        sm = [['Total Income', f'Rs. {inr(rd["total_income"])}'], ['Total Expenses', f'Rs. {inr(rd["total_expenses"])}'],
+              ['Total Investments', f'Rs. {inr(rd["total_investments"])}'], ['Total Budget', f'Rs. {inr(rd["total_budget"])}'],
+              ['Net Balance', f'Rs. {inr(rd["net_balance"])}'], ['Savings', f'Rs. {inr(rd["savings"])}'],
+              ['Budget Utilization', f'{rd["budget_utilization"]}%'], ['Health Score', f'{rd["health_score"]} / 100']]
+        pdf.add_tbl(['Metric','Amount'], sm, [85,85]); pdf.ln(6)
+        for sec, items, hdrs, keys, color in [
+            ('Income Breakdown', rd['incomes'], ['#','Source','Amount','Date'], ['source','amount','income_date'], (16,185,129)),
+            ('Expense Breakdown', rd['expenses'], ['#','Category','Amount','Date'], ['category','amount','expense_date'], (239,68,68)),
+            ('Investment Portfolio', rd['investments'], ['#','Type','Amount','Date'], ['invest_type','amount','invest_date'], (59,130,246)),
+        ]:
+            pdf.stitle(sec)
+            if items:
+                rows = [[str(i), str(it.get(keys[0],'')), f'Rs. {inr(it.get("amount",0))}', str(it.get(keys[2],''))] for i, it in enumerate(items, 1)]
+                rows.append(['', 'TOTAL', f'Rs. {inr(sum(float(it.get("amount",0)) for it in items))}', ''])
+                pdf.add_tbl(hdrs, rows, [12,60,50,48], color)
+            else:
+                pdf.set_font('Helvetica','I',10); pdf.cell(0, 8, 'No records found.', new_x='LMARGIN', new_y='NEXT')
+            pdf.ln(4)
+        if pdf.get_y() > 220: pdf.add_page()
+        pdf.stitle('Goals Summary')
+        if rd['goals']:
+            grows = [[str(i), str(g.get('goal_name','')), f'Rs. {inr(g.get("target_amount",0) or 0)}', f'Rs. {inr(g.get("current_amount",0) or 0)}', f'{g.get("progress",0)}%'] for i, g in enumerate(rd['goals'], 1)]
+            pdf.add_tbl(['#','Goal','Target','Current','Progress'], grows, [10,50,40,40,30], (139,92,246))
+        else:
+            pdf.set_font('Helvetica','I',10); pdf.cell(0, 8, 'No goals set.', new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(6)
+        pdf.stitle('Financial Health Score')
+        pdf.set_font('Helvetica','B',28); pdf.set_text_color(99,102,241)
+        pdf.cell(0, 16, f'{rd["health_score"]} / 100', align='C', new_x='LMARGIN', new_y='NEXT')
+        buf = io.BytesIO(); pdf.output(buf); buf.seek(0)
+        return send_file(buf, as_attachment=True, download_name=f'FinSight_Report_{datetime.now().strftime("%Y%m%d")}.pdf',
+                         mimetype='application/pdf')
+    else:
+        flash('Invalid download format.', 'danger')
+        return redirect(url_for('report_page'))
+
+
 @app.errorhandler(404)
+
 
 # Handles 404 error
 

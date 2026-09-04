@@ -29,11 +29,31 @@
   <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/logo.jpeg') }}" />
 
   {% block extra_head %}{% endblock %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
 </head>
 <body class="theme-dash">
+  <!-- Full Page Preloader -->
+  <div id="page-preloader">
+    <div class="preloader-content">
+      <div class="preloader-logo-wrapper">
+        <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="FinSight Logo" class="preloader-logo">
+        <div class="preloader-pulse-ring"></div>
+      </div>
+      <div class="preloader-text">Loading<span class="dots">...</span></div>
+      <div class="preloader-spinner"></div>
+    </div>
+  </div>
+
 
   <div id="cursor-dot"></div>
   <div id="cursor-ring" aria-hidden="true"></div>
+
+  {% if request.endpoint in ['login_page', 'register_page'] %}
+  <!-- Top Left Home Button (Login & Register Pages Only) -->
+  <a href="{{ url_for('home') }}" class="top-home-btn" title="Go to Home Page">
+    <i class="bi bi-house-door-fill"></i>
+  </a>
+  {% endif %}
 
   {% block content %}{% endblock %}
 
@@ -45,5 +65,6 @@
   <script src="{{ url_for('static', filename='js/cursor.js') }}"></script>
 
   {% block extra_js %}{% endblock %}
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </body>
 </html>
