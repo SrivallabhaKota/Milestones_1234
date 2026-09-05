@@ -4,24 +4,24 @@ class Config:
     # Security key
     SECRET_KEY = os.environ.get('SECRET_KEY', 'finsight_ultra_secret_key_2024_change_in_production')
 
-    # Environment variable to switch between Local and TiDB (Default is Local / False)
-    USE_TIDB = os.environ.get('USE_TIDB', 'false').lower() == 'true'
+    # We are forcing this to True to ignore Render's environment variables for a moment
+    USE_TIDB = True
 
     if USE_TIDB:
         # ---------------------------------------------------------
-        # TiDB Cloud Configuration (From your screenshots)
+        # TiDB Cloud Configuration (Direct Strings - No space issues)
         # ---------------------------------------------------------
-        MYSQL_HOST     = os.environ.get('MYSQL_HOST',     'gateway01.us-west-2.prod.aws.tidbcloud.com')
-        MYSQL_PORT     = int(os.environ.get('MYSQL_PORT', 4000))
-        MYSQL_USER     = os.environ.get('MYSQL_USER',     '2J7P9todcFuFhcR.root')
-        MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'wOQwPrEKhbO9lbSY')
-        MYSQL_DB       = os.environ.get('MYSQL_DB',       'test') # Screenshots lo sys ani undi, kavalante finsight ki marchukovachu
+        MYSQL_HOST     = 'gateway01.us-west-2.prod.aws.tidbcloud.com'
+        MYSQL_PORT     = 4000
+        MYSQL_USER     = '2J7P9todcFuFhcR.root'
+        MYSQL_PASSWORD = 'wOQwPrEKhbO9lbSY'
+        MYSQL_DB       = 'test'
         
-        # TiDB Cloud ki SSL mandatory kabatti idi True peduthunnam
+        # SSL is mandatory for TiDB Cloud
         MYSQL_SSL      = True 
     else:
         # ---------------------------------------------------------
-        # Local Database Configuration (Mee patha code - No Disturbance)
+        # Local Database Configuration 
         # ---------------------------------------------------------
         MYSQL_HOST     = os.environ.get('MYSQL_HOST',     'localhost')
         MYSQL_PORT     = int(os.environ.get('MYSQL_PORT', 3307)) 
