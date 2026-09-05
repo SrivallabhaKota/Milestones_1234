@@ -14,8 +14,8 @@ class Config:
         MYSQL_HOST     = os.environ.get('MYSQL_HOST',     'gateway01.us-west-2.prod.aws.tidbcloud.com')
         MYSQL_PORT     = int(os.environ.get('MYSQL_PORT', 4000))
         MYSQL_USER     = os.environ.get('MYSQL_USER',     '2J7P9todcFuFhcR.root')
-        MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'IWcmEvcCDiW7mF5C')
-        MYSQL_DB       = os.environ.get('MYSQL_DB',       'sys') # Screenshots lo sys ani undi, kavalante finsight ki marchukovachu
+        MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'wOQwPrEKhbO9lbSY')
+        MYSQL_DB       = os.environ.get('MYSQL_DB',       'test') # Screenshots lo sys ani undi, kavalante finsight ki marchukovachu
         
         # TiDB Cloud ki SSL mandatory kabatti idi True peduthunnam
         MYSQL_SSL      = True 
