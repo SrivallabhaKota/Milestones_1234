@@ -4,21 +4,21 @@ class Config:
     # Security key
     SECRET_KEY = os.environ.get('SECRET_KEY', 'finsight_ultra_secret_key_2024_change_in_production')
 
-    # We are forcing this to True to ignore Render's environment variables for a moment
-    USE_TIDB = True
+    # Enable TiDB Cloud or environment configuration
+    USE_TIDB = os.environ.get('USE_TIDB', 'true').lower() == 'true'
 
     if USE_TIDB:
         # ---------------------------------------------------------
-        # TiDB Cloud Configuration (Direct Strings - No space issues)
+        # TiDB Cloud Configuration (Environment variables with defaults)
         # ---------------------------------------------------------
-        MYSQL_HOST     = 'gateway01.us-west-2.prod.aws.tidbcloud.com'
-        MYSQL_PORT     = 4000
-        MYSQL_USER     = '2J7P9todcFuFhcR.root'
-        MYSQL_PASSWORD = 'ONincsXT0DJjUfl'
-        MYSQL_DB       = 'test'
+        MYSQL_HOST     = os.environ.get('MYSQL_HOST',     'gateway01.us-west-2.prod.aws.tidbcloud.com')
+        MYSQL_PORT     = int(os.environ.get('MYSQL_PORT', 4000))
+        MYSQL_USER     = os.environ.get('MYSQL_USER',     '2J7P9todcFuFhcR.root')
+        MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'ONincsXT0DJjUfl')
+        MYSQL_DB       = os.environ.get('MYSQL_DB',       'test')
         
         # SSL is mandatory for TiDB Cloud
-        MYSQL_SSL      = True 
+        MYSQL_SSL      = os.environ.get('MYSQL_SSL',      'true').lower() == 'true'
     else:
         # ---------------------------------------------------------
         # Local Database Configuration 
