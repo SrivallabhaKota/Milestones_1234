@@ -14,7 +14,7 @@ class Config:
         MYSQL_HOST     = 'gateway01.us-west-2.prod.aws.tidbcloud.com'
         MYSQL_PORT     = 4000
         MYSQL_USER     = '2J7P9todcFuFhcR.root'
-        MYSQL_PASSWORD = 'wOQwPrEKhbO9lbSY'
+        MYSQL_PASSWORD = 'ONincsXT0DJjUfl'
         MYSQL_DB       = 'test'
         
         # SSL is mandatory for TiDB Cloud
